@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Debug v2 - Resíduos</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-green-50 p-6 font-sans">
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-xl font-bold text-green-800 mb-4">♻️ Resíduos – Diagnóstico Supabase (v2)</h1>
+    <div id="sessao" class="mb-4 bg-yellow-100 p-4 rounded font-mono text-sm">Verificando sessão Supabase...</div>
+    <div id="residuos" class="text-gray-800 text-sm">Carregando resíduos...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const supabase = window.supabase.createClient(
+        "https://qojbgtzjwehdblcnjhvn.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+      );
+
+      const sessaoDiv = document.getElementById("sessao");
+      const residuosDiv = document.getElementById("residuos");
+
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (!session || !session.user) {
+          sessaoDiv.innerText = "⚠️ Nenhuma sessão ativa. Faça login.";
+          residuosDiv.innerText = "";
+          console.warn("Sessão inválida.");
+          return;
+        }
+
+        const user = session.user;
+        sessaoDiv.innerText = `✅ Sessão ativa:
+Email: ${user.email}
+ID: ${user.id}`;
+
+        const { data, error } = await supabase
+          .from("residuos")
+          .select("*")
+          .eq("usuario_id", user.id);
+
+        if (error) {
+          residuosDiv.innerText = "❌ Erro ao consultar resíduos: " + error.message;
+          console.error("Erro:", error);
+          return;
+        }
+
+        if (!data.length) {
+          residuosDiv.innerText = "📭 Nenhum resíduo encontrado.";
+          return;
+        }
+
+        residuosDiv.innerHTML = data.map((r, i) => `
+          <div class="border-b border-gray-300 py-2">
+            <strong>${i + 1}. Tipo:</strong> ${r.tipo}<br>
+            <strong>Volume:</strong> ${r.volume || "N/D"}<br>
+            <strong>Frequência:</strong> ${r.frequencia || "N/D"}
+          </div>
+        `).join("");
+        console.log("Resíduos:", data);
+      } catch (err) {
+        sessaoDiv.innerText = "❌ Erro geral: " + err.message;
+        console.error("Erro geral:", err);
+      }
+    });
+  </script>
+</body>
+</html>
