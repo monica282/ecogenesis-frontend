@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ecogenesis Lab – Menu Principal</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f3f4f6; font-family: sans-serif; padding: 2rem; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { font-size: 1.75rem; font-weight: bold; color: #14532d; margin-bottom: 1rem; }
+    ul { margin-top: 1rem; }
+    li a { color: #1d4ed8; text-decoration: underline; }
+    .status-box { background: #fef3c7; padding: 1rem; border-radius: 0.5rem; font-family: monospace; margin-top: 1rem; white-space: pre-wrap; }
+    button { background-color: #14532d; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌱 Ecogenesis Lab – Menu de Acesso</h1>
+
+    <ul class="list-disc pl-5 text-lg">
+      <li><a href="painel_login_diagnostico.html">🔐 Painel de Login + Diagnóstico</a></li>
+      <li><a href="meus_residuos_melhorado.html">♻️ Meus Resíduos</a></li>
+      <li><a href="diagnostico_supabase.html">🔍 Diagnóstico Individual</a></li>
+    </ul>
+
+    <div id="status" class="status-box mt-6">⏳ Verificando sessão Supabase...</div>
+    <button id="logout-btn" style="display:none;">🚪 Logout</button>
+  </div>
+
+  <script>
+    const supabase = supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    async function checkSession() {
+      const statusBox = document.getElementById("status");
+      const logoutBtn = document.getElementById("logout-btn");
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error || !user) {
+        statusBox.innerText = "⚠️ Nenhuma sessão ativa.
+Faça login para acessar os módulos.";
+        logoutBtn.style.display = "none";
+      } else {
+        statusBox.innerText = `✅ Sessão ativa:
+ID: ${user.id}
+Email: ${user.email}`;
+        logoutBtn.style.display = "inline-block";
+      }
+    }
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      document.getElementById("status").innerText = "✅ Logout realizado.
+Atualize a página.";
+      document.getElementById("logout-btn").style.display = "none";
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>
