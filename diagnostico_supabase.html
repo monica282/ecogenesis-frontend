@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diagnóstico Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800 p-8">
+  <h1 class="text-2xl font-bold mb-4 text-green-900">🔍 Diagnóstico de Sessão Supabase</h1>
+  <pre id="status" class="bg-yellow-100 p-4 rounded"></pre>
+
+  <script>
+    const supabase = supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    async function diagnosticar() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      const status = document.getElementById("status");
+      if (session) {
+        status.innerText = `✅ Sessão ativa para: ${session.user.email}
+ID: ${session.user.id}`;
+      } else {
+        status.innerText = "⚠️ Nenhuma sessão ativa.
+Faça login em outra página.";
+      }
+    }
+
+    diagnosticar();
+  </script>
+</body>
+</html>
