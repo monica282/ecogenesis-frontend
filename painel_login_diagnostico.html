@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login Supabase</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-green-50 p-8">
+  <div class="max-w-xl mx-auto bg-white p-6 rounded-lg shadow">
+    <h1 class="text-xl font-bold text-green-800 mb-4">🔐 Login</h1>
+    <form id="login-form" class="space-y-4">
+      <input type="email" id="email" placeholder="Email" required class="w-full border px-3 py-2 rounded" />
+      <input type="password" id="senha" placeholder="Senha" required class="w-full border px-3 py-2 rounded" />
+      <button class="bg-green-700 text-white px-4 py-2 rounded">Entrar</button>
+    </form>
+    <div id="login-status" class="mt-4 text-sm text-gray-800"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = supabase.createClient("https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...icOI");
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+      const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      document.getElementById("login-status").innerText = error ? "❌ " + error.message : "✅ Login realizado!";
+    });
+  </script>
+</body>
+</html>
