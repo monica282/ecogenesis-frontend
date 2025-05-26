@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Resíduos - Debug</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-green-50 p-6 font-sans">
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-xl font-bold text-green-800 mb-4">♻️ Meus Resíduos</h1>
+    <div id="residuos">Carregando...</div>
+    <pre id="log" class="mt-4 text-sm bg-gray-100 p-4 rounded font-mono whitespace-pre-wrap"></pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    async function carregarResiduos() {
+      const div = document.getElementById("residuos");
+      const log = document.getElementById("log");
+      try {
+        const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+        if (!session) {
+          div.innerText = "⚠️ Nenhuma sessão ativa.";
+          return;
+        }
+        log.innerText = `ID: ${session.user.id}\nEmail: ${session.user.email}`;
+
+        const { data, error } = await supabase
+          .from("residuos")
+          .select("*")
+          .eq("usuario_id", session.user.id);
+
+        if (error) {
+          div.innerText = "❌ Erro ao consultar resíduos: " + error.message;
+          return;
+        }
+
+        if (!data.length) {
+          div.innerText = "📭 Nenhum resíduo encontrado.";
+          return;
+        }
+
+        div.innerHTML = data.map((r, i) => `
+          <div class="border-b border-gray-300 py-2">
+            <strong>${i+1}. Tipo:</strong> ${r.tipo}<br>
+            <strong>Volume:</strong> ${r.volume || "N/D"}
+          </div>
+        `).join("");
+      } catch (err) {
+        div.innerText = "❌ Erro inesperado: " + err.message;
+      }
+    }
+
+    carregarResiduos();
+  </script>
+</body>
+</html>
