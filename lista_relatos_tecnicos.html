@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatos Técnicos – Ecogenesis Lab</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+    .hover-main:hover { background-color: #14532d; }
+  </style>
+</head>
+<body class="bg-main min-h-screen font-sans">
+
+  <header class="w-full bg-white py-4 shadow-sm text-center">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-2">
+    <h1 class="text-2xl font-bold text-main">Ecogenesis Lab</h1>
+    <p class="text-sm text-gray-500">Histórico de Relatos Técnicos</p>
+  </header>
+
+  <main class="max-w-4xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+    <h2 class="text-xl font-semibold text-main mb-4 text-center">📑 Relatos Enviados</h2>
+    <div id="status" class="text-sm mb-4 text-center text-yellow-800">Carregando...</div>
+    <table class="w-full text-sm border">
+      <thead>
+        <tr class="bg-green-100 text-green-800">
+          <th class="border px-3 py-2">Propriedade</th>
+          <th class="border px-3 py-2">Culturas</th>
+          <th class="border px-3 py-2">Descrição</th>
+          <th class="border px-3 py-2">Anexo</th>
+          <th class="border px-3 py-2">Data</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-relatos"></tbody>
+    </table>
+  </main>
+
+  <footer class="mt-12 text-center text-sm text-gray-500 py-6">
+    © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const status = document.getElementById("status");
+      const tbody = document.getElementById("tabela-relatos");
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        status.innerText = "⚠️ Faça login para ver seus relatos.";
+        return;
+      }
+
+      const userId = session.user.id;
+
+      const { data: relatos, error } = await supabase
+        .from("relatos_tecnicos")
+        .select("id, culturas, descricao, arquivo_url, created_at, propriedade_id, propriedades:propriedade_id(nome)")
+        .eq("usuario_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        status.innerText = "❌ Erro ao buscar relatos: " + error.message;
+        return;
+      }
+
+      if (!relatos.length) {
+        status.innerText = "ℹ️ Nenhum relato encontrado.";
+        return;
+      }
+
+      status.innerText = `✅ ${relatos.length} relato(s) encontrado(s).`;
+
+      tbody.innerHTML = relatos.map(r => `
+        <tr class="border-t hover:bg-green-50">
+          <td class="border px-2 py-1">${r.propriedades?.nome || "-"}</td>
+          <td class="border px-2 py-1">${r.culturas || "-"}</td>
+          <td class="border px-2 py-1">${r.descricao || "-"}</td>
+          <td class="border px-2 py-1 text-center">
+            ${r.arquivo_url ? `<a href="${r.arquivo_url}" target="_blank" class="text-blue-600 underline">📎 Ver</a>` : "—"}
+          </td>
+          <td class="border px-2 py-1">${new Date(r.created_at).toLocaleString("pt-BR")}</td>
+        </tr>
+      `).join("");
+    });
+  </script>
+</body>
+</html>
