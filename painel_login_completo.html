@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - Ecogenesis Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-main px-4">
+  <div class="max-w-md w-full bg-white p-8 rounded shadow-md">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-4" />
+    <h2 class="text-2xl font-bold text-main text-center mb-6">Acesso – Ecogenesis Lab</h2>
+
+    <form id="login-form" class="space-y-4">
+      <input type="email" id="email" placeholder="E-mail" class="w-full px-3 py-2 border rounded" required />
+      <input type="password" id="password" placeholder="Senha" class="w-full px-3 py-2 border rounded" required />
+      <button type="submit" class="w-full bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Entrar</button>
+    </form>
+
+    <div class="flex justify-between mt-4 text-sm text-center text-gray-600">
+      <button onclick="toggleSignup()" class="hover:underline">Criar conta</button>
+      <button onclick="resetPassword()" class="hover:underline">Esqueci a senha</button>
+    </div>
+
+    <div id="signup-section" class="hidden mt-6 border-t pt-4">
+      <h3 class="text-main font-semibold mb-2">Criar nova conta</h3>
+      <input type="email" id="signup-email" placeholder="E-mail" class="w-full px-3 py-2 border rounded mb-2" />
+      <input type="password" id="signup-password" placeholder="Senha" class="w-full px-3 py-2 border rounded mb-2" />
+      <button onclick="signup()" class="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded">Cadastrar</button>
+    </div>
+
+    <div id="status" class="mt-6 text-center text-sm text-gray-600">Informe seus dados para acessar.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    const status = document.getElementById("status");
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        status.innerText = "❌ Erro: " + error.message;
+      } else {
+        status.innerText = "✅ Login realizado com sucesso!";
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 1500);
+      }
+    });
+
+    function toggleSignup() {
+      document.getElementById("signup-section").classList.toggle("hidden");
+    }
+
+    async function signup() {
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+
+      const { error } = await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        status.innerText = "❌ Erro ao cadastrar: " + error.message;
+      } else {
+        status.innerText = "✅ Conta criada! Verifique seu e-mail para confirmar.";
+      }
+    }
+
+    async function resetPassword() {
+      const email = document.getElementById("email").value;
+      if (!email) {
+        status.innerText = "⚠️ Digite o e-mail no campo acima para redefinir a senha.";
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href
+      });
+
+      if (error) {
+        status.innerText = "❌ Erro ao enviar link: " + error.message;
+      } else {
+        status.innerText = "📩 Link de redefinição enviado para seu e-mail.";
+      }
+    }
+  </script>
+</body>
+</html>
