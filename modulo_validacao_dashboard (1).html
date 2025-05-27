@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Módulo de Validação – Ecogenesis Lab</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body class="bg-green-50 min-h-screen font-sans">
+<header class="w-full bg-white py-4 shadow-sm border-b border-gray-200 text-center">
+<h1 class="text-2xl font-bold text-green-900">Validação de Bioinsumos</h1>
+<p class="text-sm text-gray-500">Módulo exclusivo de validação científica e agronômica</p>
+</header>
+<main class="w-full max-w-2xl mx-auto bg-white mt-8 p-6 rounded-lg shadow-md">
+<form class="space-y-4" id="validacao-form">
+<input class="w-full px-3 py-2 border rounded" id="perfil_bioinsumo" placeholder="Perfil do Bioinsumo Desejado" required="" type="text"/>
+<textarea class="w-full px-3 py-2 border rounded" id="dados_modelagem" placeholder="Modelagem do Processo Produtivo (baseada em campo e resíduos)" required=""></textarea>
+<textarea class="w-full px-3 py-2 border rounded" id="manejo_utilizado" placeholder="Tipo de Manejo Utilizado com o Bioinsumo"></textarea><textarea class="w-full px-3 py-2 border rounded" id="desenho_ensaio" placeholder="Desenho do Ensaio (lab e campo)" required=""></textarea>
+<textarea class="w-full px-3 py-2 border rounded" id="metodologia_coleta" placeholder="Metodologia de Coleta de Dados (sensores, fotos, drones, etc.)" required=""></textarea>
+<textarea class="w-full px-3 py-2 border rounded" id="validacao_agronomica" placeholder="Resultado da Validação Agronômica e Eficiência"></textarea>
+<textarea class="w-full px-3 py-2 border rounded" id="comentarios" placeholder="Comentários ou observações"></textarea>
+<button class="bg-green-700 text-white px-4 py-2 rounded w-full" type="submit">Salvar Validação</button>
+<div class="mt-4"><label>Upload de Documentos ou Imagens:</label><input class="block mt-1" id="arquivo_validacao" multiple="true" type="file"/></div><button class="bg-yellow-600 text-white px-4 py-2 rounded w-full mt-4" id="solicitar-analise" type="button">Solicitar Análise Laboratorial / Enviar Kit</button><div class="mt-4 text-sm bg-yellow-50 p-4 rounded font-mono text-center" id="status-analise"></div></form>
+<div class="mt-4 text-sm bg-yellow-100 p-4 rounded font-mono text-center" id="status-validacao"></div>
+
+<div class="mt-10">
+<h2 class="text-xl font-semibold text-green-900 mb-4">Painel de Validações</h2>
+<div class="flex flex-wrap gap-4 mb-4">
+<button class="bg-yellow-500 text-white px-4 py-2 rounded" onclick="filtrarValidacoes('em_andamento')">Em Andamento</button>
+<button class="bg-green-700 text-white px-4 py-2 rounded" onclick="filtrarValidacoes('finalizada')">Finalizadas</button>
+<button class="bg-gray-500 text-white px-4 py-2 rounded" onclick="filtrarValidacoes('todas')">Todas</button>
+<button class="bg-blue-700 text-white px-4 py-2 rounded" onclick="exportarValidacoesCSV()">Exportar CSV</button>
+</div>
+<div class="overflow-x-auto text-sm bg-gray-50 p-4 rounded shadow-inner" id="tabela-validacoes">
+    Carregando validações...
+  </div>
+</div>
+<div class="mt-10">
+<h2 class="text-xl font-semibold text-green-900 mb-4">Gráfico de Validações por Tipo</h2>
+<canvas id="graficoValidacoes"></canvas>
+</div>
+</main>
+<footer class="mt-12 text-center text-sm text-gray-500 py-6">
+    © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+  </footer>
+<script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    const form = document.getElementById("validacao-form");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        document.getElementById("status-validacao").innerText = "⚠️ Nenhuma sessão ativa. Faça login.";
+        return;
+      }
+
+      const userId = session.user.id;
+      const dados = {
+        usuario_id: userId,
+        perfil_bioinsumo: document.getElementById("perfil_bioinsumo").value.trim(),
+        dados_modelagem: document.getElementById("dados_modelagem").value.trim(),
+        desenho_ensaio: document.getElementById("desenho_ensaio").value.trim(),
+        metodologia_coleta: document.getElementById("metodologia_coleta").value.trim(),
+        validacao_agronomica: document.getElementById("validacao_agronomica").value.trim(),
+        comentarios: document.getElementById("comentarios").value.trim(),
+        manejo_utilizado: document.getElementById("manejo_utilizado").value.trim(),
+      };
+
+      const { error } = await supabase.from("validacoes").insert([dados]);
+
+      if (error) {
+        document.getElementById("status-validacao").innerText = "❌ Erro ao salvar: " + error.message;
+      } else {
+        document.getElementById("status-validacao").innerText = "✅ Validação registrada com sucesso!";
+        form.reset();
+      }
+    });
+  
+document.getElementById("solicitar-analise").addEventListener("click", async function () {
+  const motivo = prompt("Descreva o tipo de análise solicitada ou kit desejado:");
+  if (!motivo) return;
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    document.getElementById("status-analise").innerText = "⚠️ Sessão inativa. Faça login.";
+    return;
+  }
+
+  const userId = session.user.id;
+  const dadosSolicitacao = {
+    usuario_id: userId,
+    data_solicitacao: new Date().toISOString(),
+    tipo: motivo
+  };
+
+  const { error } = await supabase.from("solicitacoes_analise").insert([dadosSolicitacao]);
+
+  if (error) {
+    document.getElementById("status-analise").innerText = "❌ Erro ao solicitar análise: " + error.message;
+  } else {
+    document.getElementById("status-analise").innerText = "✅ Solicitação registrada com sucesso!";
+  }
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>
+async function carregarValidacoes(statusFiltro = 'todas') {
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session.user.id;
+
+  let query = supabase.from("validacoes").select("*").eq("usuario_id", userId);
+  if (statusFiltro !== "todas") query = query.eq("status", statusFiltro);
+
+  const { data, error } = await query;
+  const container = document.getElementById("tabela-validacoes");
+
+  if (error || !data) {
+    container.innerText = "Erro ao carregar validações.";
+    return;
+  }
+
+  let html = "<table class='min-w-full table-auto border'><thead><tr><th class='border px-2'>Perfil</th><th class='border px-2'>Manejo</th><th class='border px-2'>Status</th><th class='border px-2'>Download</th></tr></thead><tbody>";
+  data.forEach(v => {
+    html += `<tr>
+      <td class='border px-2'>${v.perfil_bioinsumo}</td>
+      <td class='border px-2'>${v.manejo_utilizado || ''}</td>
+      <td class='border px-2'>${v.status || 'em_andamento'}</td>
+      <td class='border px-2'>${v.arquivo_url ? `<a href='${v.arquivo_url}' target='_blank' class='text-blue-600 underline'>Download</a>` : '-'}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  container.innerHTML = html;
+
+  plotarGrafico(data);
+}
+
+function filtrarValidacoes(filtro) {
+  carregarValidacoes(filtro);
+}
+
+function exportarValidacoesCSV() {
+  const linhas = [["Perfil do Bioinsumo", "Manejo", "Status"]];
+  document.querySelectorAll("#tabela-validacoes tbody tr").forEach(tr => {
+    const cols = Array.from(tr.children).map(td => td.innerText);
+    linhas.push(cols.slice(0, 3));
+  });
+  const csvContent = linhas.map(e => e.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.setAttribute("href", URL.createObjectURL(blob));
+  link.setAttribute("download", "validacoes.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function plotarGrafico(data) {
+  const ctx = document.getElementById("graficoValidacoes").getContext("2d");
+  const tipos = [...new Set(data.map(v => v.perfil_bioinsumo))];
+  const contagem = tipos.map(tipo =>
+    data.filter(v => v.perfil_bioinsumo === tipo).length
+  );
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: tipos,
+      datasets: [{
+        label: 'Validações por Tipo',
+        data: contagem,
+        backgroundColor: 'rgba(34, 197, 94, 0.7)'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+window.addEventListener("load", () => carregarValidacoes());
+</script></body>
+</html>
