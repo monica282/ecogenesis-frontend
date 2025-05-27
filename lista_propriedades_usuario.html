@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Minhas Propriedades – Ecogenesis Lab</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="bg-main min-h-screen font-sans">
+
+  <header class="w-full bg-white py-4 shadow-sm text-center">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-2">
+    <h1 class="text-2xl font-bold text-main">Ecogenesis Lab</h1>
+    <p class="text-sm text-gray-500">Visualização das Propriedades Cadastradas</p>
+  </header>
+
+  <main class="max-w-5xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+    <h2 class="text-xl font-semibold text-main mb-4 text-center">🌱 Propriedades Vinculadas</h2>
+    <div id="status" class="text-sm mb-4 text-center text-yellow-800">Carregando...</div>
+    <table class="w-full text-sm border">
+      <thead>
+        <tr class="bg-green-100 text-green-800">
+          <th class="border px-3 py-2">Nome</th>
+          <th class="border px-3 py-2">Município / UF</th>
+          <th class="border px-3 py-2">Área Cultivada</th>
+          <th class="border px-3 py-2">Sistema</th>
+          <th class="border px-3 py-2">Culturas</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-propriedades"></tbody>
+    </table>
+  </main>
+
+  <footer class="mt-12 text-center text-sm text-gray-500 py-6">
+    © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const status = document.getElementById("status");
+      const tbody = document.getElementById("tabela-propriedades");
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        status.innerText = "⚠️ Faça login para ver suas propriedades.";
+        return;
+      }
+
+      const userId = session.user.id;
+
+      const { data: propriedades, error } = await supabase
+        .from("propriedades")
+        .select("id, nome, municipio, uf, area_cultivada, sistema_producao, culturas")
+        .eq("usuario_id", userId);
+
+      if (error) {
+        status.innerText = "❌ Erro ao buscar propriedades: " + error.message;
+        return;
+      }
+
+      if (!propriedades.length) {
+        status.innerText = "ℹ️ Nenhuma propriedade encontrada.";
+        return;
+      }
+
+      status.innerText = `✅ ${propriedades.length} propriedade(s) encontrada(s).`;
+
+      tbody.innerHTML = propriedades.map(p => `
+        <tr class="border-t hover:bg-green-50">
+          <td class="border px-2 py-1">${p.nome || "-"}</td>
+          <td class="border px-2 py-1">${p.municipio || ""}/${p.uf || ""}</td>
+          <td class="border px-2 py-1">${p.area_cultivada || "-"}</td>
+          <td class="border px-2 py-1">${p.sistema_producao || "-"}</td>
+          <td class="border px-2 py-1">${p.culturas || "-"}</td>
+        </tr>
+      `).join("");
+    });
+  </script>
+</body>
+</html>
