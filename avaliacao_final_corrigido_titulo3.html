@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Avaliação – Ecogenesis Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="min-h-screen bg-main text-main p-4">
+  <div class="max-w-5xl mx-auto bg-white p-6 rounded shadow-md">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-40 mx-auto mb-6" />
+    <h1 class="text-3xl font-bold text-center mb-6">Módulo de Avaliação – Ecogenesis Lab</h1>
+
+    <!-- Avaliação Preliminar -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-semibold mb-4">1. Avaliação Preliminar dos Dados</h2>
+      <p class="mb-2">Com base nos dados inseridos, o sistema avaliou as seguintes condições:</p>
+      <ul class="list-disc list-inside text-gray-700 mb-4">
+        <li>✅ Dados suficientes para iniciar recomendações de manejo.</li>
+        <li>⚠️ Faltam informações sobre microbiologia do solo.</li>
+        <li>📌 Sugerido: adicionar resultados de análise química do solo.</li>
+      </ul>
+      <p class="text-gray-600">Atualize os dados no módulo <strong>Minha Propriedade</strong> para melhores recomendações.</p>
+    </section>
+
+    <!-- Simulação com Dados Simulados -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-semibold mb-4">2. Simulação (exemplo)</h2>
+      <div id="simulado-form" class="space-y-4 mb-4">
+        <div>
+          <label class="block mb-1 font-medium">Tipo de solo:</label>
+          <input type="text" class="w-full px-3 py-2 border rounded" placeholder="Argiloso, arenoso..." />
+        </div>
+        <div>
+          <label class="block mb-1 font-medium">Umidade (%):</label>
+          <input type="number" class="w-full px-3 py-2 border rounded" placeholder="Ex: 20" />
+        </div>
+        <div>
+          <label class="block mb-1 font-medium">Nível de infestação:</label>
+          <select class="w-full px-3 py-2 border rounded">
+            <option>Baixo</option>
+            <option>Médio</option>
+            <option>Alto</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="simularDadosSimulados()" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Rodar simulação</button>
+      <div id="resultado-simulado" class="mt-3 text-gray-700 text-sm"></div>
+    </section>
+
+    <!-- Simulação com Dados Reais -->
+    <section>
+      <h2 class="text-2xl font-semibold mb-4">3. Simulação com dados da propriedade</h2>
+      <p class="text-gray-700 mb-2">Com base nos dados cadastrados no módulo Minha Propriedade:</p>
+      <ul class="list-disc list-inside text-gray-700 mb-4">
+        <li><strong>Tipo de solo:</strong> Argiloso</li>
+        <li><strong>Umidade:</strong> <span class="text-red-600">⚠️ dado ausente</span></li>
+        <li><strong>Nível de infestação:</strong> Médio</li>
+      </ul>
+      <p class="text-gray-600 mb-4">Preencha os dados ausentes no módulo correspondente para obter maior precisão.</p>
+      <button onclick="simularDadosReais()" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Rodar simulação</button>
+      <div id="resultado-reais" class="mt-3 text-gray-700 text-sm"></div>
+    </section>
+  </div>
+
+  <script>
+    function simularDadosSimulados() {
+      const resultado = document.getElementById("resultado-simulado");
+      resultado.innerText = "🔄 Processando simulação...";
+      setTimeout(() => {
+        resultado.innerText = "✅ Resultado: Redução estimada de 65% na infestação após 15 dias.";
+      }, 1200);
+    }
+
+    function simularDadosReais() {
+      const resultado = document.getElementById("resultado-reais");
+      resultado.innerText = "🔄 Verificando dados...";
+      setTimeout(() => {
+        resultado.innerText = "⚠️ Resultado parcial: dados incompletos. Simulação estima redução de 50%, mas recomenda atualização da umidade do solo.";
+      }, 1500);
+    }
+  </script>
+</body>
+</html>
