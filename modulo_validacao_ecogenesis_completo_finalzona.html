@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Validação - Ecogenesis Lab</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css"/>
+</head>
+<body class="bg-white text-gray-800 p-6">
+  <header class="mb-6 flex items-center justify-between">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABqCAYAAADf1nwUAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAXEgAAFxIBZ5/SUgAAABl0RVh0Q3JlYXRpb24gVGltZQAwNS8yNy8yNtm2euc=" alt="Ecogenesis Lab" class="h-16">
+    <h1 class="text-2xl font-bold">Módulo de Validação</h1>
+  </header>
+
+  <section class="mb-8">
+    <form id="form-validacao" class="space-y-6">
+      <input type="hidden" name="propriedade_id" value="PROP001" />
+
+      <h2 class="text-xl font-semibold mb-2">🔍 Seleção da Recomendação Técnica</h2>
+      <select id="recomendacao-select" class="border rounded px-3 py-2 w-full">
+        <option selected disabled>Selecione uma recomendação</option>
+        <option value="rec1" data-parametros="Fertilidade,Umidade">Recomendação 1 - Aplicação X</option>
+        <option value="rec2" data-parametros="pH">Recomendação 2 - Produto Y</option>
+      </select>
+
+      <h2 class="text-xl font-semibold mb-2">🧪 Desenho Experimental</h2>
+      <textarea name="desenho_experimental" placeholder="Descreva o desenho experimental..." class="w-full border rounded px-3 py-2 mb-4"></textarea>
+
+      <div class="mb-4">
+        <label class="font-medium">Tipo de Teste:</label>
+        <select name="tipo_teste" class="border rounded px-2 py-1 ml-2">
+          <option value="campo">Campo</option>
+          <option value="laboratorio">Laboratório</option>
+          <option value="ambos">Ambos</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Parâmetros a Monitorar</label>
+        <div id="checkbox-container" class="flex gap-4 flex-wrap mb-2">
+          <label><input type="checkbox" name="parametros" value="Fertilidade" class="mr-1"> Fertilidade</label>
+          <label><input type="checkbox" name="parametros" value="Umidade" class="mr-1"> Umidade</label>
+          <label><input type="checkbox" name="parametros" value="pH" class="mr-1"> pH</label>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="novo-parametro" placeholder="Adicionar novo parâmetro" class="border rounded px-2 py-1"/>
+          <button type="button" onclick="adicionarParametro()" class="bg-blue-500 text-white px-3 py-1 rounded">Adicionar</button>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Anexar arquivos (opcional):</label>
+        <input type="file" name="anexos" multiple class="block w-full"/>
+      </div>
+
+      <div class="flex gap-4 mb-4">
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Solicitar Análise (Tag.Lab)</button>
+        <button class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Solicitar Kit (Quality View)</button>
+      </div>
+
+      <div class="mt-6 text-right">
+        <button type="submit" class="bg-green-700 text-white px-6 py-3 rounded hover:bg-green-800">📤 Enviar Validação</button>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    function adicionarParametro() {
+      const valor = document.getElementById('novo-parametro').value.trim();
+      if (valor === '') return;
+      const container = document.getElementById('checkbox-container');
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="checkbox" name="parametros" value="${valor}" class="mr-1"> ${valor}`;
+      label.classList.add('mr-4');
+      container.appendChild(label);
+      document.getElementById('novo-parametro').value = '';
+    }
+  </script>
+<section class="mb-6">
+    <h2 class="text-xl font-bold mb-2">📊 Gráfico de Monitoramento</h2>
+    <div class="flex flex-wrap gap-4 items-end mb-4">
+      <select id="filtro-parametro" class="border rounded px-2 py-1">
+        <option value="">Todos</option>
+        <option value="Fertilidade">Fertilidade</option>
+        <option value="Umidade">Umidade</option>
+        <option value="pH">pH</option>
+      </select>
+
+      <select id="filtro-periodo" class="border rounded px-2 py-1">
+        <option value="7">7 dias</option>
+        <option value="15">15 dias</option>
+        <option value="30" selected>30 dias</option>
+      </select>
+
+      <select id="filtro-tipo" class="border rounded px-2 py-1">
+        <option value="line" selected>Linha</option>
+        <option value="bar">Barra</option>
+        <option value="radar">Radar</option>
+        <option value="pie">Pizza</option>
+        <option value="scatter">Dispersão</option>
+        <option value="area">Área</option>
+        <option value="stacked">Área Empilhada</option>
+      </select>
+
+      <button id="aplicar-filtros" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Atualizar Gráfico</button>
+    </div>
+
+    <canvas id="grafico-parametros" class="w-full h-64 mb-6"></canvas>
+    <div id="insights" class="mt-4 text-sm"></div>
+  </section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    let chart;
+    const canvas = document.getElementById('grafico-parametros');
+    const ctx = canvas.getContext('2d');
+
+    const datasetsOriginais = [
+      { label: 'Fertilidade', data: Array.from({length: 30}, () => Math.random() * 10 + 60), borderColor: 'green', backgroundColor: 'rgba(0,128,0,0.2)' },
+      { label: 'Umidade', data: Array.from({length: 30}, () => Math.random() * 20 + 70), borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.2)' },
+      { label: 'pH', data: Array.from({length: 30}, () => (Math.random() * 1.5 + 5.5).toFixed(2)), borderColor: 'orange', backgroundColor: 'rgba(255,165,0,0.2)' }
+    ];
+
+    const gerarLabels = (dias) => Array.from({length: dias}, (_, i) => `Dia ${i + 1}`);
+
+    const atualizarInsights = (datasets, dias) => {
+      const el = document.getElementById("insights");
+      const html = datasets.map(ds => {
+        const dados = ds.data.slice(-dias);
+        const variacao = (dados[dados.length - 1] - dados[0]).toFixed(2);
+        const media = (dados.reduce((a,b) => parseFloat(a)+parseFloat(b),0) / dados.length).toFixed(2);
+        return `<li><strong>${ds.label}</strong>: variação ${variacao}, média ${media}</li>`;
+      });
+      el.innerHTML = "<strong>Insights:</strong><ul class='list-disc list-inside'>" + html.join("") + "</ul>";
+    };
+
+    const gerarGrafico = () => {
+      const parametro = document.getElementById("filtro-parametro").value;
+      const dias = parseInt(document.getElementById("filtro-periodo").value);
+      const tipo = document.getElementById("filtro-tipo").value;
+
+      const datasets = parametro ? datasetsOriginais.filter(d => d.label === parametro) : datasetsOriginais;
+      datasets.forEach(d => d.data = d.data.slice(-dias));
+
+      atualizarInsights(datasets, dias);
+
+      if (chart) chart.destroy();
+
+      let chartType = tipo;
+      if (tipo === 'area' || tipo === 'stacked') chartType = 'line';
+
+      const stacked = tipo === 'stacked';
+      const data = tipo === 'pie' ? {
+        labels: datasets.map(d => d.label),
+        datasets: [{ data: datasets.map(d => d.data[d.data.length - 1]), backgroundColor: ['green','blue','orange'] }]
+      } : tipo === 'scatter' ? {
+        datasets: datasets.map(d => ({
+          label: d.label,
+          data: d.data.map((val, i) => ({ x: i + 1, y: parseFloat(val) })),
+          backgroundColor: d.backgroundColor,
+          borderColor: d.borderColor
+        }))
+      } : {
+        labels: gerarLabels(dias),
+        datasets: datasets.map(d => ({ ...d, fill: tipo === 'area' || tipo === 'stacked' }))
+      };
+
+      chart = new Chart(ctx, {
+        type: chartType,
+        data: data,
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' }, title: { display: true, text: 'Evolução dos Parâmetros' } },
+          scales: stacked ? { x: { stacked: true }, y: { stacked: true } } : {}
+        }
+      });
+    };
+
+    document.getElementById("aplicar-filtros").addEventListener("click", gerarGrafico);
+
+    document.getElementById("recomendacao-select").addEventListener("change", (e) => {
+      const option = e.target.selectedOptions[0];
+      document.getElementById("parametros-monitorar").value = option.dataset.parametros || "";
+    });
+
+    gerarGrafico();
+  });
+</script>
+</body>
+</html>
+
+</body>
+</html>
