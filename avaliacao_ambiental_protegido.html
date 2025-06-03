@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Avaliação Ambiental - Ecogenesis Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
+  <div class="w-full max-w-3xl bg-white p-6 rounded shadow-md text-center">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-24 mx-auto mb-4" />
+    <h1 class="text-2xl font-bold text-main mb-4">Avaliação Ambiental</h1>
+    <p class="text-gray-600">Página em construção. Esta seção fará parte do MVP da plataforma.</p>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  const supabase = window.supabase.createClient(
+    "https://qojbgtzjwehdblcnjhvn.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+  );
+
+  async function checkSession() {
+    let retries = 5;
+    while (retries > 0) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) return;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      retries--;
+    }
+    window.location.href = "painel_login_completo_atualizado.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", checkSession);
+</script>
+
+</body>
+</html>
