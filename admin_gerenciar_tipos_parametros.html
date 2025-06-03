@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin – Gerenciar Tipos e Parâmetros</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f1f5f9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="min-h-screen font-sans flex flex-col items-center">
+  <header class="w-full bg-white py-4 shadow-sm border-b border-gray-200 text-center">
+    <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-2" />
+    <h1 class="text-2xl font-bold text-main">Administração – Ecogenesis Lab</h1>
+    <p class="text-sm text-gray-500">Cadastrar tipos de relatos e parâmetros padrão</p>
+  </header>
+
+  <main class="w-full max-w-4xl bg-white mt-8 p-6 rounded-lg shadow-md space-y-8">
+
+    <section>
+      <h2 class="text-lg font-semibold text-main mb-2">📌 Cadastrar Tipo de Relato</h2>
+      <form id="tipo-relato-form" class="space-y-3">
+        <input type="text" id="nome_tipo" placeholder="Nome do tipo de relato" class="w-full px-3 py-2 border rounded"/>
+        <textarea id="descricao_tipo" placeholder="Descrição (opcional)" class="w-full px-3 py-2 border rounded"></textarea>
+        <button type="submit" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Salvar Tipo</button>
+      </form>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-semibold text-main mb-2">🧩 Associar Parâmetro a Tipo</h2>
+      <form id="parametro-form" class="space-y-3">
+        <select id="tipo_select" class="w-full px-3 py-2 border rounded">
+          <option value="">Carregando tipos...</option>
+        </select>
+        <input type="text" id="nome_parametro" placeholder="Nome do parâmetro" class="w-full px-3 py-2 border rounded"/>
+        <input type="text" id="unidade" placeholder="Unidade (opcional)" class="w-full px-3 py-2 border rounded"/>
+        <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Adicionar Parâmetro</button>
+      </form>
+    </section>
+
+    <div id="status" class="text-sm mt-4 bg-yellow-100 p-4 rounded font-mono whitespace-pre-wrap text-center">Carregando...</div>
+
+  </main>
+
+  <footer class="mt-12 text-center text-sm text-gray-500 py-6">
+    © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const tipoSelect = document.getElementById("tipo_select");
+      const status = document.getElementById("status");
+
+      async function carregarTipos() {
+        const { data, error } = await supabase.from("tipos_relatos").select("*");
+        if (error || !data.length) {
+          tipoSelect.innerHTML = "<option value=''>Nenhum tipo encontrado</option>";
+          status.innerText = "⚠️ Não foi possível carregar tipos de relato.";
+          return;
+        }
+        tipoSelect.innerHTML = data.map(t => `<option value="${t.id}">${t.nome_tipo}</option>`).join("");
+        status.innerText = "✅ Tipos carregados.";
+      }
+
+      carregarTipos();
+
+      document.getElementById("tipo-relato-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const nome = document.getElementById("nome_tipo").value;
+        const descricao = document.getElementById("descricao_tipo").value;
+
+        const { error } = await supabase.from("tipos_relatos").insert([{ nome_tipo: nome, descricao_opcional: descricao }]);
+        if (error) {
+          status.innerText = "❌ Erro ao salvar tipo: " + error.message;
+        } else {
+          status.innerText = "✅ Tipo de relato cadastrado com sucesso!";
+          document.getElementById("tipo-relato-form").reset();
+          carregarTipos();
+        }
+      });
+
+      document.getElementById("parametro-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const tipoId = document.getElementById("tipo_select").value;
+        const nome = document.getElementById("nome_parametro").value;
+        const unidade = document.getElementById("unidade").value;
+
+        const { error } = await supabase.from("parametros_padrao").insert([{ tipo_relato_id: tipoId, nome_parametro: nome, unidade: unidade }]);
+        if (error) {
+          status.innerText = "❌ Erro ao adicionar parâmetro: " + error.message;
+        } else {
+          status.innerText = "✅ Parâmetro adicionado com sucesso!";
+          document.getElementById("parametro-form").reset();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
