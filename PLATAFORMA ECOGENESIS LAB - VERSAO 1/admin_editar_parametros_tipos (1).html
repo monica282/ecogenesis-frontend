@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin – Editar Parâmetros</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const EMAILS_ADMIN = ["admin@ecogenesis.org", "coordenador@plataforma.com"]; // <- Altere os e-mails dos admins aqui
+
+async function verificarPermissaoAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !EMAILS_ADMIN.includes(user.email)) {
+    document.body.innerHTML = "<div class='text-center mt-32 text-red-600 text-xl font-bold'>⛔ Acesso restrito. Esta área é exclusiva para administradores.</div>";
+    throw new Error("Acesso não autorizado.");
+  }
+}
+verificarPermissaoAdmin();
+</script>
+
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold text-green-800 mb-4">🔧 Administração: Editar Parâmetros por Tipo</h1>
+    
+<div class="mb-8">
+  <h2 class="text-lg font-semibold text-green-800 mb-2">📌 Cadastrar Novo Tipo de Relato</h2>
+  <div class="space-y-2">
+    <input type="text" id="novoTipoNome" placeholder="Nome do tipo de relato" class="w-full p-2 border rounded" />
+    <textarea id="novoTipoDescricao" placeholder="Descrição (opcional)" class="w-full p-2 border rounded"></textarea>
+    <button onclick="adicionarTipoRelato()" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Salvar Tipo</button>
+  </div>
+</div>
+
+<label class="block font-semibold mb-1">Tipo de Relato:</label>
+    <select id="tipoRelatoSelect" class="w-full mb-4 p-2 border rounded">
+      <option value="">Carregando tipos...</option>
+    </select>
+
+    <div id="parametrosContainer" class="space-y-2 mb-6">
+      <p class="text-gray-600 italic">Selecione um tipo para ver e editar os parâmetros.</p>
+    </div>
+
+    <div class="flex gap-2">
+      <input type="text" id="novoParametro" placeholder="Novo parâmetro" class="flex-1 p-2 border rounded" />
+      <input type="text" id="novaUnidade" placeholder="Unidade (opcional)" class="p-2 border rounded w-48" />
+      <button onclick="adicionarParametro()" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Adicionar</button>
+    </div>
+
+    <div id="status" class="mt-4 text-sm text-center text-gray-700"></div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://qojbgtzjwehdblcnjhvn.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvamJndHpqd2VoZGJsY25qaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxMjU0NTYsImV4cCI6MjA2MzcwMTQ1Nn0.WT7wI0HMkz40v570-lRDO-G8axgSynhkMlloT6TicOI"
+    );
+
+    let tipoSelecionado = null;
+
+    async function carregarTiposRelato() {
+      const { data, error } = await supabase.from("tipos_relatos").select("*");
+      const select = document.getElementById("tipoRelatoSelect");
+      if (error || !data) {
+        select.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">Selecione...</option>' + data.map(t => `<option value="${t.id}">${t.nome_tipo}</option>`).join("");
+    }
+
+    async function carregarParametros(tipoId) {
+      const { data, error } = await supabase.from("parametros_padrao").select("*").eq("tipo_relato_id", tipoId);
+      const container = document.getElementById("parametrosContainer");
+      container.innerHTML = "";
+
+      if (error || !data.length) {
+        container.innerHTML = "<p class='italic text-gray-600'>Nenhum parâmetro cadastrado para este tipo.</p>";
+        return;
+      }
+
+      data.forEach(p => {
+        const linha = document.createElement("div");
+        linha.className = "flex justify-between items-center border p-2 rounded";
+        linha.innerHTML = `
+          <span><b>${p.nome_parametro}</b> ${p.unidade ? `(${p.unidade})` : ""}</span>
+          <button onclick="excluirParametro(${p.id})" class="text-red-600 hover:underline">Remover</button>
+        `;
+        container.appendChild(linha);
+      });
+    }
+
+    async function adicionarParametro() {
+      const nome = document.getElementById("novoParametro").value;
+      const unidade = document.getElementById("novaUnidade").value;
+      const status = document.getElementById("status");
+
+      if (!tipoSelecionado || !nome) {
+        status.innerText = "⚠️ Informe um parâmetro válido e selecione um tipo.";
+        return;
+      }
+
+      const { error } = await supabase.from("parametros_padrao").insert([{ tipo_relato_id: tipoSelecionado, nome_parametro: nome, unidade }]);
+      if (error) {
+        status.innerText = "❌ Erro ao adicionar parâmetro.";
+      } else {
+        status.innerText = "✅ Parâmetro adicionado.";
+        document.getElementById("novoParametro").value = "";
+        document.getElementById("novaUnidade").value = "";
+        await carregarParametros(tipoSelecionado);
+      }
+    }
+
+    async function excluirParametro(id) {
+      const { error } = await supabase.from("parametros_padrao").delete().eq("id", id);
+      const status = document.getElementById("status");
+      if (error) {
+        status.innerText = "❌ Erro ao remover parâmetro.";
+      } else {
+        status.innerText = "✅ Parâmetro removido.";
+        await carregarParametros(tipoSelecionado);
+      }
+    }
+
+    document.getElementById("tipoRelatoSelect").addEventListener("change", async function () {
+      tipoSelecionado = this.value;
+      if (tipoSelecionado) await carregarParametros(tipoSelecionado);
+    });
+
+    
+async function adicionarTipoRelato() {
+  const nome = document.getElementById("novoTipoNome").value;
+  const descricao = document.getElementById("novoTipoDescricao").value;
+  const status = document.getElementById("status");
+
+  if (!nome) {
+    status.innerText = "⚠️ Informe um nome válido para o tipo de relato.";
+    return;
+  }
+
+  const { error } = await supabase.from("tipos_relatos").insert([{ nome_tipo: nome, descricao_opcional: descricao }]);
+  if (error) {
+    status.innerText = "❌ Erro ao adicionar tipo.";
+  } else {
+    status.innerText = "✅ Tipo de relato cadastrado.";
+    document.getElementById("novoTipoNome").value = "";
+    document.getElementById("novoTipoDescricao").value = "";
+    await carregarTiposRelato();
+  }
+}
+
+carregarTiposRelato();
+  </script>
+</body>
+</html>
