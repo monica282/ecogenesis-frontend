@@ -1,0 +1,476 @@
+
+<!-- HTML SIMPLIFICADO COM INTEGRAÇÃO AO SUPABASE -->
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<title>Relato e Avaliação - Ecogenesis Lab</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+const { createClient } = supabase;
+const supabase = createClient("https://ntolffdyndrnkxrpmjzi.supabase.co", 
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY");
+</script>
+
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-50 p-6">
+<!-- Modal de sucesso -->
+<!-- Alerta de erro -->
+
+<div class="flex justify-center mt-6">
+<div class="flex space-x-4 bg-gray-100 p-2 rounded shadow">
+<button class="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800" onclick="showTab('relato')">📋 Relato Técnico</button>
+<button class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700" onclick="showTab('avaliacao')">🧪 Avaliação</button>
+</div>
+</div>
+<main class="mt-6 space-y-4 max-w-2xl mx-auto bg-white p-6 rounded shadow" id="tab-relato">
+<h2 class="text-xl font-bold text-green-800">📋 Relato Técnico</h2>
+<label>Tipo de Relato:</label>
+<select class="w-full p-2 border rounded" id="tipo_relato">
+<option value="">Selecione...</option>
+<option value="Doença Fúngica">Doença Fúngica</option>
+<option value="Problema de Fertilidade">Problema de Fertilidade</option>
+<option value="Infestação de Pragas">Infestação de Pragas</option>
+</select>
+<label>Parâmetros Associados:</label>
+<div class="space-y-2 bg-gray-50 p-3 rounded border" id="parametros-container"></div>
+<label>Descrição:</label>
+<textarea class="w-full border rounded p-2" id="descricao" rows="3"></textarea>
+<div class="bg-gray-100 p-3 rounded">
+<label>📍 Marcar Local no Mapa (clicar para registrar):</label>
+<div class="w-full h-64 border rounded mt-2" id="map"></div>
+</div>
+<button class="w-full bg-green-700 text-white py-2 rounded hover:bg-green-800" onclick="enviarRelato()">✅ Enviar Relato ao Supabase</button><div class="hidden mt-4 p-3 rounded bg-green-100 text-green-800 border border-green-300 text-sm text-center" id="mensagem-sucesso">✅ Relato enviado com sucesso!</div><div class="hidden mt-4 p-3 rounded bg-red-100 text-red-800 border border-red-300 text-sm text-center" id="mensagem-erro">❌ Erro ao enviar relato. Verifique os dados e tente novamente.</div>
+<hr class="my-6 border-t"/>
+<h3 class="text-lg font-semibold text-gray-800">📂 Meus Relatos</h3>
+<table class="w-full text-left mt-4 border rounded text-sm" id="tabela-relatos">
+<thead class="bg-gray-100">
+<tr>
+<th class="p-2">Tipo</th>
+<th class="p-2">Parâmetros</th>
+<th class="p-2">Data</th>
+<th class="p-2">Ações</th>
+</tr>
+</thead>
+<tbody class="bg-white divide-y" id="corpo-tabela-relatos">
+<tr><td class="p-2 text-gray-400 italic" colspan="4">Carregando...</td></tr>
+</tbody>
+</table>
+</main>
+<main class="mt-6 max-w-2xl mx-auto bg-white p-6 rounded shadow" id="tab-avaliacao" style="display:none">
+<h2 class="text-xl font-bold text-yellow-700">🧪 Avaliação</h2>
+<p class="text-gray-600">Esta aba será usada para rodar simulações futuras com base nos dados enviados.</p>
+<hr class="my-6 border-t"/>
+<h3 class="text-lg font-semibold text-gray-800">📂 Meus Relatos</h3>
+<table class="w-full text-left mt-4 border rounded text-sm" id="tabela-relatos">
+<thead class="bg-gray-100">
+<tr>
+<th class="p-2">Tipo</th>
+<th class="p-2">Parâmetros</th>
+<th class="p-2">Data</th>
+<th class="p-2">Ações</th>
+</tr>
+</thead>
+<tbody class="bg-white divide-y" id="corpo-tabela-relatos">
+<tr><td class="p-2 text-gray-400 italic" colspan="4">Carregando...</td></tr>
+</tbody>
+</table>
+<div class="space-y-4 mt-4" id="avaliacao-relato">
+<h3 class="text-lg font-semibold text-gray-800">📑 Dados do Relato Selecionado</h3>
+<div class="bg-gray-50 border rounded p-3 text-sm text-gray-700 italic" id="resumo-relato">
+    Nenhum relato selecionado ainda.
+  </div>
+<div class="space-y-2 text-sm" id="parametros-avaliacao">
+<!-- Lista de parâmetros com status aparecerá aqui -->
+</div>
+<button class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700" onclick="simularRelato()">⚙️ Rodar Simulação com Dados Disponíveis</button>
+</div>
+</main>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<link href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" rel="stylesheet"/>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+
+  const { data: relatos, error } = await supabase
+    .from("relatos_tecnicos")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("data_envio", { ascending: false });
+
+  const corpo = document.getElementById("corpo-tabela-relatos");
+  corpo.innerHTML = "";
+
+  if (relatos && relatos.length > 0) {
+    relatos.forEach(r => {
+      const linha = document.createElement("tr");
+      linha.innerHTML = `
+        <td class="p-2">${r.tipo_relato}</td>
+        <td class="p-2">${(r.parametros || []).join(", ")}</td>
+        <td class="p-2">${new Date(r.data_envio).toLocaleString()}</td>
+        <td class="p-2"><button onclick="showTab('avaliacao')" class="text-blue-600 hover:underline">Avaliar</button></td>
+      `;
+      corpo.appendChild(linha);
+    });
+  } else {
+    corpo.innerHTML = '<tr><td colspan="4" class="p-2 text-gray-400 italic">Nenhum relato enviado ainda.</td></tr>';
+  }
+});
+</script>
+
+<script>
+let relatoSelecionado = null;
+
+function carregarRelatoParaAvaliacao(relato) {
+  showTab('avaliacao');
+  relatoSelecionado = relato;
+  const resumo = document.getElementById("resumo-relato");
+  resumo.innerHTML = `
+    <b>Tipo:</b> ${relato.tipo_relato}<br/>
+    <b>Data:</b> ${new Date(relato.data_envio).toLocaleString()}<br/>
+    <b>Descrição:</b> ${relato.descricao || "-"}
+  `;
+
+  const paramContainer = document.getElementById("parametros-avaliacao");
+  paramContainer.innerHTML = "";
+  const todos = (relato.parametros || []);
+  const preenchidos = todos;  // Aqui, consideramos todos como preenchidos por enquanto
+
+  todos.forEach(p => {
+    const div = document.createElement("div");
+    div.innerHTML = `✅ <b>${p}</b>: dado disponível`;
+    paramContainer.appendChild(div);
+  });
+
+  if (todos.length === 0) {
+    paramContainer.innerHTML = "<em>Nenhum parâmetro informado neste relato.</em>";
+  }
+}
+
+async function simularRelato() {
+  if (!relatoSelecionado) {
+    alert("⚠️ Nenhum relato selecionado.");
+    return;
+  }
+  alert("🔬 Rodando simulação com dados disponíveis para: " + relatoSelecionado.tipo_relato);
+}
+
+// Sobrescrever botão 'Avaliar' da tabela para carregar na aba Avaliação
+document.addEventListener("DOMContentLoaded", async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+
+  const { data: relatos, error } = await supabase
+    .from("relatos_tecnicos")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("data_envio", { ascending: false });
+
+  const corpo = document.getElementById("corpo-tabela-relatos");
+  corpo.innerHTML = "";
+
+  if (relatos && relatos.length > 0) {
+    relatos.forEach((r, idx) => {
+      const linha = document.createElement("tr");
+      linha.innerHTML = `
+        <td class="p-2">${r.tipo_relato}</td>
+        <td class="p-2">${(r.parametros || []).join(", ")}</td>
+        <td class="p-2">${new Date(r.data_envio).toLocaleString()}</td>
+        <td class="p-2"><button onclick='carregarRelatoParaAvaliacao(${JSON.stringify(r)})' class="text-blue-600 hover:underline">Avaliar</button></td>
+      `;
+      corpo.appendChild(linha);
+    });
+  } else {
+    corpo.innerHTML = '<tr><td colspan="4" class="p-2 text-gray-400 italic">Nenhum relato enviado ainda.</td></tr>';
+  }
+});
+</script>
+<script>
+document.getElementById("form-relato").addEventListener("submit", function (event) {
+  event.preventDefault();
+  const form = document.getElementById("form-relato");
+  const msg = document.getElementById("mensagem-sucesso");
+  msg.classList.remove("hidden");
+  msg.scrollIntoView({ behavior: "smooth" });
+  form.reset();
+});
+</script>
+
+<script>
+async function enviarRelato() {
+  const tipoRelato = document.getElementById("tipo_relato").value;
+  const descricao = document.getElementById("descricao").value;
+  const parametros = Array.from(document.querySelectorAll('input[name="parametros"]:checked')).map(p => p.value);
+  const latitude = window.localProblema?.lat ?? null;
+  const longitude = window.localProblema?.lng ?? null;
+
+  const sucesso = document.getElementById("mensagem-sucesso");
+  const erro = document.getElementById("mensagem-erro");
+
+  if (!tipoRelato || !descricao || parametros.length === 0) {
+    erro.classList.remove("hidden");
+    sucesso.classList.add("hidden");
+    erro.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+
+  try {
+    const user = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("relatos_tecnicos").insert([{
+      user_id: user.data.user?.id ?? null,
+      tipo_relato: tipoRelato,
+      parametros: parametros,
+      descricao: descricao,
+      latitude: latitude,
+      longitude: longitude,
+      data_envio: new Date().toISOString()
+    }]);
+
+    if (error) throw error;
+
+    sucesso.classList.remove("hidden");
+    erro.classList.add("hidden");
+    sucesso.scrollIntoView({ behavior: "smooth" });
+
+    document.getElementById("tipo_relato").value = "";
+    document.getElementById("descricao").value = "";
+    document.getElementById("parametros-container").innerHTML = "";
+  } catch (e) {
+    erro.classList.remove("hidden");
+    sucesso.classList.add("hidden");
+    erro.scrollIntoView({ behavior: "smooth" });
+  }
+
+  setTimeout(() => {
+    sucesso.classList.add("hidden");
+    erro.classList.add("hidden");
+  }, 5000);
+}
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+
+  const { data: relatos, error } = await supabase
+    .from("relatos_tecnicos")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("data_envio", { ascending: false });
+
+  const corpo = document.getElementById("corpo-tabela-relatos");
+  corpo.innerHTML = "";
+
+  if (relatos && relatos.length > 0) {
+    relatos.forEach(r => {
+      const linha = document.createElement("tr");
+      linha.innerHTML = `
+        <td class="p-2">${r.tipo_relato}</td>
+        <td class="p-2">${(r.parametros || []).join(", ")}</td>
+        <td class="p-2">${new Date(r.data_envio).toLocaleString()}</td>
+        <td class="p-2"><button onclick='carregarRelatoParaAvaliacao(${JSON.stringify(r)})' class="text-blue-600 hover:underline">Avaliar</button></td>
+      `;
+      corpo.appendChild(linha);
+    });
+  } else {
+    corpo.innerHTML = '<tr><td colspan="4" class="p-2 text-gray-400 italic">Nenhum relato enviado ainda.</td></tr>';
+  }
+});
+
+function carregarRelatoParaAvaliacao(relato) {
+  showTab('avaliacao');
+  const resumo = document.getElementById("resumo-relato");
+  resumo.innerHTML = `
+    <b>Tipo:</b> ${relato.tipo_relato}<br/>
+    <b>Data:</b> ${new Date(relato.data_envio).toLocaleString()}<br/>
+    <b>Descrição:</b> ${relato.descricao || "-"}
+  `;
+
+  const paramContainer = document.getElementById("parametros-avaliacao");
+  paramContainer.innerHTML = "";
+  const todos = (relato.parametros || []);
+
+  todos.forEach(p => {
+    const div = document.createElement("div");
+    div.innerHTML = `✅ <b>${p}</b>: dado disponível`;
+    paramContainer.appendChild(div);
+  });
+
+  if (todos.length === 0) {
+    paramContainer.innerHTML = "<em>Nenhum parâmetro informado neste relato.</em>";
+  }
+}
+
+function simularRelato() {
+  alert("🔬 Simulação executada com os dados disponíveis.");
+}
+
+function showTab(tab) {
+  document.getElementById("tab-relato").style.display = tab === 'relato' ? 'block' : 'none';
+  document.getElementById("tab-avaliacao").style.display = tab === 'avaliacao' ? 'block' : 'none';
+}
+</script>
+
+
+<script>
+let tiposParametrosDinamicos = {};
+
+async function carregarTiposRelatoDoBanco() {
+  const { data: tipos, error: erroTipos } = await supabase.from("tipos_relatos").select("*");
+  if (erroTipos || !tipos.length) {
+    console.error("Erro ao carregar tipos de relato:", erroTipos);
+    return;
+  }
+
+  const selectTipo = document.getElementById("tipo_relato");
+  selectTipo.innerHTML = '<option value="">Selecione...</option>' + tipos.map(t => `<option value="${t.id}">${t.nome_tipo}</option>`).join("");
+
+  tipos.forEach(tipo => {
+    tiposParametrosDinamicos[tipo.id] = { nome: tipo.nome_tipo, parametros: [] };
+  });
+
+  const { data: parametros, error: erroParams } = await supabase.from("parametros_padrao").select("*");
+  if (erroParams) {
+    console.error("Erro ao carregar parâmetros:", erroParams);
+    return;
+  }
+
+  parametros.forEach(p => {
+    if (tiposParametrosDinamicos[p.tipo_relato_id]) {
+      tiposParametrosDinamicos[p.tipo_relato_id].parametros.push(p.nome_parametro);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await carregarTiposRelatoDoBanco();
+
+  document.getElementById("tipo_relato").addEventListener("change", function () {
+    const tipoId = this.value;
+    const container = document.getElementById("parametros-container");
+    container.innerHTML = "";
+
+    const tipo = tiposParametrosDinamicos[tipoId];
+    if (!tipo || !tipo.parametros.length) {
+      container.innerHTML = "<em>Sem parâmetros disponíveis.</em>";
+      return;
+    }
+
+    tipo.parametros.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "border-b pb-2 mb-2";
+      div.innerHTML = `
+        <label class="font-semibold text-gray-800">${p}</label><br/>
+        <input type="checkbox" name="parametros" value="${p}" class="mr-1"> Tenho este dado<br/>
+        <input type="file" name="upload_${p}" class="mt-1 text-sm"><br/>
+        <button type="button" onclick="puxarSollytch('${p}')" class="text-blue-600 underline text-sm mt-1">🔗 Puxar da Sollytch View</button>
+      `;
+      container.appendChild(div);
+    });
+  });
+});
+</script>
+
+
+<!-- Painel Geoespacial e Filtros -->
+<div id="painel-geoespacial" class="mt-6 p-4 border rounded bg-gray-50">
+  <h3 class="text-md font-semibold text-gray-700">🌍 Ferramentas Geoespaciais</h3>
+  <label><input type="checkbox" onchange="toggleCamada('solo')"> Tipo de Solo</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('uso')"> Uso da Terra</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('clima')"> Clima</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('ndvi')"> NDVI (ArcGIS)</label><br/>
+  <button onclick="gerarMapaConfiabilidade()" class="mt-2 bg-blue-600 text-white px-3 py-1 rounded">📊 Mapa de Confiabilidade</button><br/>
+  <button onclick="solicitarAnaliseTagLab(relatoSelecionado)" class="mt-2 bg-green-600 text-white px-3 py-1 rounded">🔬 Solicitar Análise (Tag.Lab)</button>
+</div>
+
+<script src="https://unpkg.com/esri-leaflet"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+<script>
+let camadaMicrobacias;
+let relatosTodos = [];
+let camadaNDVI = L.esri.imageMapLayer({
+  url: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services/NDVI/ImageServer'
+});
+
+const camadas = {
+  solo: L.tileLayer.wms("https://geoserver.mapbiomas.org/geoserver/mapbiomas/wms", {
+    layers: 'mapbiomas:uso_da_terra_2022', format: 'image/png', transparent: true }),
+  uso: L.tileLayer.wms("https://geoserver.terrabrasilis.dpi.inpe.br/geoserver/wms", {
+    layers: 'terraclass_amazonia', format: 'image/png', transparent: true }),
+  clima: L.tileLayer.wms("https://geo.server.clima/wms", {
+    layers: 'clima:temperatura_media', format: 'image/png', transparent: true }),
+  ndvi: camadaNDVI
+};
+
+function toggleCamada(tipo) {
+  if (!mapa) return;
+  if (mapa.hasLayer(camadas[tipo])) {
+    mapa.removeLayer(camadas[tipo]);
+  } else {
+    camadas[tipo].addTo(mapa);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  if (!mapa) return;
+
+  // carregar microbacias
+  fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
+    .then(res => res.json())
+    .then(data => {
+      camadaMicrobacias = L.geoJSON(data, {
+        onEachFeature: function (feature, layer) {
+          layer.bindPopup("Área: " + feature.properties.name);
+          layer.on('click', function () {
+            filtrarRelatosPorMicrobacia(feature);
+          });
+        }
+      }).addTo(mapa);
+    });
+});
+
+function gerarMapaConfiabilidade() {
+  if (!relatoSelecionado || !mapa) return;
+  const confiabilidade = relatoSelecionado.parametros.length * 10;
+  L.circle([relatoSelecionado.latitude || -22.9, relatoSelecionado.longitude || -43.2], {
+    radius: 1000,
+    color: confiabilidade > 20 ? 'green' : 'red',
+    fillOpacity: 0.4
+  }).addTo(mapa).bindPopup("Confiabilidade estimada: " + confiabilidade + "%");
+}
+
+function solicitarAnaliseTagLab(relato) {
+  if (!relato || !relato.id) return alert("Nenhum relato selecionado.");
+  const url = `https://taglab.ecogenesis.org/solicitar?relato_id=${relato.id}`;
+  window.open(url, '_blank');
+}
+
+function filtrarRelatosPorMicrobacia(feature) {
+  const relatosFiltrados = relatosTodos.filter(r => {
+    if (!r.latitude || !r.longitude) return false;
+    return turf.booleanPointInPolygon(
+      turf.point([r.longitude, r.latitude]),
+      feature
+    );
+  });
+
+  const completude = calcularIndiceCompletude(relatosFiltrados);
+  alert(`Microbacia com ${relatosFiltrados.length} relatos. Índice médio de completude: ${completude}%`);
+}
+
+function calcularIndiceCompletude(relatos) {
+  const total = relatos.length;
+  const soma = relatos.reduce((acc, r) => acc + (r.parametros?.length || 0), 0);
+  return total ? Math.round(soma / total * 10) : 0;
+}
+</script>
+</body>
+</html>
