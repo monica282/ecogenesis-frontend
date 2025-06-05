@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - Ecogenesis Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-main px-4">
+  <div class="max-w-md w-full bg-white p-8 rounded shadow-md">
+    <a href="https://ecogenesislab.vercel.app">
+      <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-4" />
+    </a>
+    <h2 class="text-2xl font-bold text-main text-center mb-6">Acesso – Ecogenesis Lab</h2>
+
+    <form id="login-form" class="space-y-4">
+      <input type="email" id="email" placeholder="E-mail" class="w-full px-3 py-2 border rounded" required />
+      <input type="password" id="password" placeholder="Senha" class="w-full px-3 py-2 border rounded" required />
+      <button type="submit" class="w-full bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800">Entrar</button>
+    </form>
+
+    <div class="flex justify-between mt-4 text-sm text-center text-gray-600">
+      <button onclick="toggleSignup()" class="hover:underline">Criar conta</button>
+      <button onclick="resetPassword()" class="hover:underline">Esqueci a senha</button>
+    </div>
+
+    <div id="signup-section" class="hidden mt-6 border-t pt-4">
+      <h3 class="text-main font-semibold mb-2">Criar nova conta</h3>
+      <input type="text" id="signup-name" placeholder="Nome completo" class="w-full px-3 py-2 border rounded mb-2" required />
+      <input type="email" id="signup-email" placeholder="E-mail" class="w-full px-3 py-2 border rounded mb-2" required />
+      <input type="password" id="signup-password" placeholder="Senha" class="w-full px-3 py-2 border rounded mb-2" required />
+      <select id="signup-role" class="w-full px-3 py-2 border rounded mb-2" required>
+        <option value="">Selecione o perfil</option>
+        <option value="produtor">Produtor</option>
+        <option value="tecnico">Técnico</option>
+        <option value="pesquisador">Pesquisador</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <button onclick="signup()" class="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded">Cadastrar</button>
+    </div>
+
+    <div id="status" class="mt-6 text-center text-sm font-medium text-gray-600">Informe seus dados para acessar.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // VERIFIQUE SE ESTA CHAVE E URL ESTÃO EXATAS COM AS DO SEU PROJETO NO SUPABASE
+    // Certifique-se de que não há caracteres extras como o '—' no final da chave!
+    const supabase = window.supabase.createClient(
+      "https://ntolffdyndrnkxrpmjzi.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY"
+    );
+
+    const status = document.getElementById("status");
+
+    // LÓGICA DE LOGIN
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      // ADICIONE ESTES CONSOLE.LOGS PARA DEPURAR O OBJETO DO USUÁRIO APÓS O LOGIN
+      console.log("Dados de login Supabase:", data);
+      console.log("Objeto User após login:", data ? data.user : null);
+
+      if (error) {
+        status.innerText = "❌ Erro no login: " + error.message;
+        status.className = "mt-6 text-center text-sm font-medium text-red-600";
+        console.error("Erro completo no login:", error);
+      } else {
+        status.innerText = "✅ Login realizado com sucesso!";
+        status.className = "mt-6 text-center text-sm font-medium text-green-600";
+
+        const user = data.user;
+        if (user) {
+          console.log("ID do Usuário (user.id) após login:", user.id); // Log do ID do usuário
+
+          // Tenta verificar se o usuário já existe na tabela 'usuarios'
+          const { data: existing, error: lookupError } = await supabase
+            .from("usuarios")
+            .select("*")
+            .eq("id", user.id);
+
+          if (lookupError) {
+            console.error("Erro ao procurar usuário na tabela 'usuarios' após login:", lookupError);
+            // Você pode exibir uma mensagem de erro aqui para o usuário se quiser
+          }
+
+          // Se o usuário não existe na tabela 'usuarios', insere seus dados
+          if (!existing || existing.length === 0) {
+            console.log("Usuário não encontrado na tabela 'usuarios' após login. Tentando inserir...");
+            const role = user.user_metadata.role || "produtor";
+            const nome = user.user_metadata.name || ""; // Nome do metadata ou vazio
+            
+            const { error: insertError } = await supabase.from("usuarios").insert([
+              {
+                id: user.id,
+                email: user.email,
+                role: role,
+                nome: nome
+              }
+            ]);
+
+            if (insertError) {
+              console.error("Erro ao inserir dados do usuário na tabela 'usuarios' após login:", insertError);
+              status.innerText = "❌ Erro ao registrar perfil: " + insertError.message;
+              status.className = "mt-6 text-center text-sm font-medium text-red-600";
+            } else {
+              console.log("Dados do usuário inseridos com sucesso na tabela 'usuarios' após login.");
+            }
+          } else {
+            console.log("Usuário já existe na tabela 'usuarios'.");
+          }
+        } else {
+          console.error("Objeto 'user' é nulo após o login. Verifique as credenciais ou configurações de autenticação.");
+          status.innerText = "❌ Erro interno: Usuário não identificado após o login.";
+          status.className = "mt-6 text-center text-sm font-medium text-red-600";
+        }
+
+        // Redireciona após um pequeno atraso
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 1500);
+      }
+    });
+
+    // Função para alternar a seção de cadastro
+    function toggleSignup() {
+      document.getElementById("signup-section").classList.toggle("hidden");
+    }
+
+    // LÓGICA DE CADASTRO (SIGNUP)
+    async function signup() {
+      const name = document.getElementById("signup-name").value;
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+      const role = document.getElementById("signup-role").value;
+
+      // As verificações de 'required' no HTML já devem lidar com isso,
+      // mas é bom ter uma checagem JavaScript também, se desejar mensagens personalizadas.
+      if (!name) {
+        status.innerText = "⚠️ Por favor, digite seu nome completo.";
+        status.className = "mt-6 text-center text-sm font-medium text-yellow-600";
+        return;
+      }
+      if (!email) {
+        status.innerText = "⚠️ Por favor, digite seu e-mail.";
+        status.className = "mt-6 text-center text-sm font-medium text-yellow-600";
+        return;
+      }
+      if (!password) {
+        status.innerText = "⚠️ Por favor, digite uma senha.";
+        status.className = "mt-6 text-center text-sm font-medium text-yellow-600";
+        return;
+      }
+      if (!role) {
+        status.innerText = "⚠️ Selecione um perfil de usuário.";
+        status.className = "mt-6 text-center text-sm font-medium text-yellow-600";
+        return;
+      }
+
+      // PASSO 1: Cadastrar usuário no Supabase Authentication
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { role, name } // Metadados do usuário para o Auth
+        }
+      });
+
+      if (authError) {
+        status.innerText = "❌ Erro ao cadastrar: " + authError.message;
+        status.className = "mt-6 text-center text-sm font-medium text-red-600";
+        console.error("Erro no Supabase Auth SignUp:", authError); // Log detalhado do erro
+      } else {
+        // PASSO 2: O cadastro no Auth foi bem-sucedido. Agora, insira na sua tabela 'usuarios'.
+        const user = authData.user; // Obtenha o objeto de usuário do Auth
+        
+        if (user) {
+          console.log("Usuário cadastrado no Auth. ID:", user.id); // Confirmação
+
+          const { error: insertError } = await supabase.from("usuarios").insert([
+            {
+              id: user.id, // Use o ID do usuário do Auth
+              email: user.email,
+              role: role,
+              nome: name
+            }
+          ]);
+
+          if (insertError) {
+            status.innerText = "❌ Conta criada no Auth, mas erro ao registrar perfil: " + insertError.message;
+            status.className = "mt-6 text-center text-sm font-medium text-red-600";
+            console.error("Erro ao inserir perfil na tabela 'usuarios':", insertError); // Log detalhado do erro
+          } else {
+            status.innerText = "✅ Conta criada e perfil registrado! Verifique seu e-mail para confirmar.";
+            status.className = "mt-6 text-center text-sm font-medium text-green-600";
+            console.log("Perfil do usuário inserido com sucesso na tabela 'usuarios'.");
+            // Limpar campos após sucesso
+            document.getElementById("signup-name").value = "";
+            document.getElementById("signup-email").value = "";
+            document.getElementById("signup-password").value = "";
+            document.getElementById("signup-role").value = "";
+          }
+        } else {
+          status.innerText = "❌ Erro: Conta criada, mas usuário não retornado pelo Auth.";
+          status.className = "mt-6 text-center text-sm font-medium text-red-600";
+          console.error("Auth SignUp retornou sucesso, mas objeto user é nulo:", authData);
+        }
+      }
+    }
+
+    // LÓGICA DE REDEFINIÇÃO DE SENHA
+    async function resetPassword() {
+      const email = document.getElementById("email").value;
+      if (!email) {
+        status.innerText = "⚠️ Digite o e-mail no campo acima para redefinir a senha.";
+        status.className = "mt-6 text-center text-sm font-medium text-yellow-600";
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href
+      });
+
+      if (error) {
+        status.innerText = "❌ Erro ao enviar link: " + error.message;
+        status.className = "mt-6 text-center text-sm font-medium text-red-600";
+      } else {
+        status.innerText = "📩 Link de redefinição enviado para seu e-mail.";
+        status.className = "mt-6 text-center text-sm font-medium text-green-600";
+      }
+    }
+  </script>
+</body>
+</html>
