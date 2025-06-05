@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<title>Relato e Avaliação - Ecogenesis Lab</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<link href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-50 p-6">
+<div class="flex justify-center mt-6">
+<div class="flex space-x-4 bg-gray-100 p-2 rounded shadow">
+<button class="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800" onclick="showTab('relato')">📋 Relato Técnico</button>
+<button class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700" onclick="showTab('avaliacao')">🧪 Avaliação</button>
+</div>
+</div>
+<main class="mt-6 space-y-4 max-w-2xl mx-auto bg-white p-6 rounded shadow" id="tab-relato">
+<h2 class="text-xl font-bold text-green-800">📋 Relato Técnico</h2>
+<label>Tipo de Relato:</label>
+<select class="w-full p-2 border rounded" id="tipo_relato">
+<option value="">Selecione...</option>
+</select>
+<label>Parâmetros Associados:</label>
+<div class="space-y-2 bg-gray-50 p-3 rounded border" id="parametros-container"></div>
+<label>Descrição:</label>
+<textarea class="w-full border rounded p-2" id="descricao" rows="3"></textarea>
+<div class="bg-gray-100 p-3 rounded">
+<label>📍 Marcar Local no Mapa (clicar para registrar):</label>
+<div class="w-full h-64 border rounded mt-2" id="map"></div>
+</div>
+<button class="w-full bg-green-700 text-white py-2 rounded hover:bg-green-800" onclick="enviarRelato()">✅ Enviar Relato ao Supabase</button><div class="hidden mt-4 p-3 rounded bg-green-100 text-green-800 border border-green-300 text-sm text-center" id="mensagem-sucesso">✅ Relato enviado com sucesso!</div><div class="hidden mt-4 p-3 rounded bg-red-100 text-red-800 border border-red-300 text-sm text-center" id="mensagem-erro">❌ Erro ao enviar relato. Verifique os dados e tente novamente.</div>
+<hr class="my-6 border-t"/>
+<h3 class="text-lg font-semibold text-gray-800">📂 Meus Relatos</h3>
+<table class="w-full text-left mt-4 border rounded text-sm" id="tabela-relatos">
+<thead class="bg-gray-100">
+<tr>
+<th class="p-2">Tipo</th>
+<th class="p-2">Parâmetros</th>
+<th class="p-2">Data</th>
+<th class="p-2">Ações</th>
+</tr>
+</thead>
+<tbody class="bg-white divide-y" id="corpo-tabela-relatos">
+<tr><td class="p-2 text-gray-400 italic" colspan="4">Carregando...</td></tr>
+</tbody>
+</table>
+</main>
+<main class="mt-6 max-w-2xl mx-auto bg-white p-6 rounded shadow" id="tab-avaliacao" style="display:none">
+<h2 class="text-xl font-bold text-yellow-700">🧪 Avaliação</h2>
+<p class="text-gray-600">Esta aba será usada para rodar simulações futuras com base nos dados enviados.</p>
+<hr class="my-6 border-t"/>
+<h3 class="text-lg font-semibold text-gray-800">📂 Meus Relatos</h3>
+<table class="w-full text-left mt-4 border rounded text-sm" id="tabela-relatos">
+<thead class="bg-gray-100">
+<tr>
+<th class="p-2">Tipo</th>
+<th class="p-2">Parâmetros</th>
+<th class="p-2">Data</th>
+<th class="p-2">Ações</th>
+</tr>
+</thead>
+<tbody class="bg-white divide-y" id="corpo-tabela-relatos">
+<tr><td class="p-2 text-gray-400 italic" colspan="4">Carregando...</td></tr>
+</tbody>
+</table>
+<div class="space-y-4 mt-4" id="avaliacao-relato">
+<h3 class="text-lg font-semibold text-gray-800">📑 Dados do Relato Selecionado</h3>
+<div class="bg-gray-50 border rounded p-3 text-sm text-gray-700 italic" id="resumo-relato">
+    Nenhum relato selecionado ainda.
+  </div>
+<div class="space-y-2 text-sm" id="parametros-avaliacao">
+</div>
+<button class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700" onclick="simularRelato()">⚙️ Rodar Simulação com Dados Disponíveis</button>
+</div>
+</main>
+
+<div id="painel-geoespacial" class="mt-6 p-4 border rounded bg-gray-50">
+  <h3 class="text-md font-semibold text-gray-700">🌍 Ferramentas Geoespaciais</h3>
+  <label><input type="checkbox" onchange="toggleCamada('solo')"> Tipo de Solo</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('uso')"> Uso da Terra</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('clima')"> Clima</label><br/>
+  <label><input type="checkbox" onchange="toggleCamada('ndvi')"> NDVI (ArcGIS)</label><br/>
+  <button onclick="gerarMapaConfiabilidade()" class="mt-2 bg-blue-600 text-white px-3 py-1 rounded">📊 Mapa de Confiabilidade</button><br/>
+  <button onclick="solicitarAnaliseTagLab(relatoSelecionado)" class="mt-2 bg-green-600 text-white px-3 py-1 rounded">🔬 Solicitar Análise (Tag.Lab)</button>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<script>
+  // ** Substitua 'SUA_URL_DO_PROJETO_SUPABASE' e 'SUA_ANON_KEY_SUPABASE' pelos seus valores reais do Supabase **
+  const SUPABASE_URL = 'https://ntolffdyndrnkxrpmjzi.supabase.co'; // Ex: 'https://ntolffdyndrnkxrpmjzi.supabase.co'
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY'; // Ex: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY'
+
+  // Variável para o cliente Supabase. Será definida após a biblioteca carregar.
+  let supabaseClient; 
+
+  // Função para tentar inicializar o Supabase
+  function initializeSupabaseClientAndLoadData() {
+    // Verifica se a variável global 'Supabase' (com S maiúsculo) existe
+    if (typeof Supabase !== 'undefined' && typeof Supabase.createClient === 'function') {
+      try {
+        supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Atribui ao window para acesso global em outros scripts, se necessário
+        window.supabase = supabaseClient; 
+        console.log("Supabase client initialized successfully!");
+        
+        // Agora que o Supabase está pronto, chama as funções de carregamento
+        carregarMeusRelatos(); 
+        carregarTiposRelatoDoBanco();
+      } catch (e) {
+        console.error("Error initializing Supabase client:", e);
+      }
+    } else {
+      // Se 'Supabase' ainda não estiver definido, tenta novamente após um pequeno atraso
+      console.warn("Supabase library not yet loaded. Retrying Supabase client initialization...");
+      setTimeout(initializeSupabaseClientAndLoadData, 100); 
+    }
+  }
+
+  // Inicia a tentativa de inicialização quando o DOM estiver pronto
+  document.addEventListener("DOMContentLoaded", initializeSupabaseClientAndLoadData);
+</script>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+<script>
+  let mapa; // Declara a variável mapa no escopo global para ser acessível por outras funções
+
+  document.addEventListener("DOMContentLoaded", function() {
+    // Inicializa o mapa apenas se o elemento 'map' existir
+    if (document.getElementById('map')) {
+      mapa = L.map('map').setView([-22.9068, -43.1729], 13); // Coordenadas do Rio de Janeiro, nível de zoom 13
+      // Adiciona uma camada base de mapa (OpenStreetMap)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mapa);
+
+      let marker; // Variável para armazenar o marcador do local do problema
+      window.localProblema = null; // Variável global para armazenar a lat/lng do problema
+
+      // Adiciona um listener de clique no mapa para registrar o local do problema
+      mapa.on('click', function(e) {
+        if (marker) {
+          mapa.removeLayer(marker); // Remove o marcador anterior se houver
+        }
+        marker = L.marker(e.latlng).addTo(mapa)
+          .bindPopup("Local do problema: " + e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4))
+          .openPopup();
+        window.localProblema = { lat: e.latlng.lat, lng: e.latlng.lng }; // Armazena a localização clicada
+        alert(`Local do problema registrado: Latitude ${e.latlng.lat.toFixed(4)}, Longitude ${e.latlng.lng.toFixed(4)}`);
+      });
+    } else {
+      console.warn("Elemento com ID 'map' não encontrado. O mapa não será inicializado.");
+    }
+  });
+</script>
+
+<script>
+let relatoSelecionado = null; // Variável global para armazenar o relato selecionado para avaliação
+let relatosTodos = []; // Variável global para armazenar todos os relatos do usuário
+
+// Função para carregar os relatos do Supabase e preencher as tabelas
+async function carregarMeusRelatos() {
+  // Verifica se a variável 'supabase' já está definida antes de tentar usá-la
+  if (typeof window.supabase === 'undefined') {
+    console.warn("Supabase client not yet defined when trying to load reports. Retrying...");
+    setTimeout(carregarMeusRelatos, 200);
+    return;
+  }
+
+  const user = (await window.supabase.auth.getUser()).data.user;
+  if (!user) {
+    console.warn("Nenhum usuário logado. Não foi possível carregar os relatos.");
+    const mensagemLogin = '<tr><td colspan="4" class="p-2 text-gray-400 italic">Faça login para ver seus relatos.</td></tr>';
+    document.querySelector("#tab-relato #corpo-tabela-relatos").innerHTML = mensagemLogin;
+    document.querySelector("#tab-avaliacao #corpo-tabela-relatos").innerHTML = mensagemLogin;
+    return;
+  }
+
+  const { data: relatos, error } = await window.supabase
+    .from("relatos_tecnicos")
+    .select("*")
+    .eq("user_id", user.id) 
+    .order("data_envio", { ascending: false });
+
+  if (error) {
+    console.error("Erro ao carregar relatos:", error.message);
+    const mensagemErro = '<tr><td colspan="4" class="p-2 text-red-400 italic">Erro ao carregar relatos.</td></tr>';
+    document.querySelector("#tab-relato #corpo-tabela-relatos").innerHTML = mensagemErro;
+    document.querySelector("#tab-avaliacao #corpo-tabela-relatos").innerHTML = mensagemErro;
+    return;
+  }
+
+  relatosTodos = relatos; // Armazena os relatos para uso posterior (ex: filtragem no mapa)
+
+  const corpoTabelaRelato = document.querySelector("#tab-relato #corpo-tabela-relatos");
+  const corpoTabelaAvaliacao = document.querySelector("#tab-avaliacao #corpo-tabela-relatos");
+
+  // Limpa as tabelas antes de preencher
+  corpoTabelaRelato.innerHTML = "";
+  corpoTabelaAvaliacao.innerHTML = "";
+
+  if (relatos && relatos.length > 0) {
+    relatos.forEach((r) => {
+      const linha = document.createElement("tr");
+      linha.innerHTML = `
+        <td class="p-2"><span class="math-inline">\{r\.tipo\_relato\}</td\>
+<td class\="p\-2"\></span>{(r.parametros || []).join(", ")}</td>
+        <td class="p-2"><span class="math-inline">\{new Date\(r\.data\_envio\)\.toLocaleString\(\)\}</td\>
+<td class\="p\-2"\><button onclick\='carregarRelatoParaAvaliacao\(</span>{JSON.stringify(r)})' class="text-blue-600 hover:underline">Avaliar</button></td>
+      `;
+      // Adiciona as linhas às duas tabelas (uma clonada para a primeira)
+      corpoTabelaRelato.appendChild(linha.cloneNode(true));
+      corpoTabelaAvaliacao.appendChild(linha);
+    });
+  } else {
+    const mensagemSemRelato = '<tr><td colspan="4" class="p-2 text-gray-400 italic">Nenhum relato enviado ainda.</td></tr>';
+    corpoTabelaRelato.innerHTML = mensagemSemRelato;
+    corpoTabelaAvaliacao.innerHTML = mensagemSemRelato;
+  }
+}
+
+function carregarRelatoParaAvaliacao(relato) {
+  showTab('avaliacao');
+  relatoSelecionado = relato; // Armazena o relato selecionado na variável global
+  const resumo = document.getElementById("resumo-relato");
+  resumo.innerHTML = `
+    <b>Tipo:</b> ${relato.tipo_relato}<br/>
+    <b>Data:</b> ${new Date(relato.data_envio).toLocaleString()}<br/>
+    <b>Descrição:</b> ${relato.descricao || "-"}
+  `;
+
+  const paramContainer = document.getElementById("parametros-avaliacao");
+  paramContainer.innerHTML = "";
+  const todos = (relato.parametros || []);
+
+  todos.forEach(p => {
+    const div = document.createElement("div");
+    div.innerHTML = `✅ <b>${p}</b>: dado disponível`;
+    paramContainer.appendChild(div);
+  });
+
+  if (todos.length === 0) {
+    paramContainer.innerHTML = "<em>Nenhum parâmetro informado neste relato.</em>";
+  }
+}
+
+async function simularRelato() {
+  if (!relatoSelecionado) {
+    alert("⚠️ Nenhum relato selecionado.");
+    return;
+  }
+  alert("🔬 Rodando simulação com dados disponíveis para: " + relatoSelecionado.tipo_relato);
+}
+
+function showTab(tab) {
+  document.getElementById("tab-relato").style.display = tab === 'relato' ? 'block' : 'none';
+  document.getElementById("tab-avaliacao").style.display = tab === 'avaliacao' ? 'block' : 'none';
+}
+</script>
+
+<script>
+// Este script era para o form-relato, mas o evento de submit foi movido para enviarRelato()
+// document.getElementById("form-relato").addEventListener("submit", function (event) {
+//   event.preventDefault();
+//   const form = document.getElementById("form-relato");
+//   const msg = document.getElementById("mensagem-sucesso");
+//   msg.classList.remove("hidden");
+//   msg.scrollIntoView({ behavior: "smooth" });
+//   form.reset();
+// });
+</script>
+
+<script>
+async function enviarRelato() {
+  // Verifica se a variável 'supabase' já está definida antes de tentar usá-la
+  if (typeof window.supabase === 'undefined') {
+    console.warn("Supabase client not yet defined when trying to send report. Cannot proceed.");
+    document.getElementById("mensagem-erro").classList.remove("hidden");
+    document.getElementById("mensagem-erro").textContent = "❌ Erro: Supabase não inicializado. Tente recarregar a página.";
+    return;
+  }
+
+  const tipoRelato = document.getElementById("tipo_relato").value;
+  const descricao = document.getElementById("descricao").value;
+  const parametros = Array.from(document.querySelectorAll('input[name="parametros"]:checked')).map(p => p.value);
+  const latitude = window.localProblema?.lat ?? null;
+  const longitude = window.localProblema?.lng ?? null;
+
+  const sucesso = document.getElementById("mensagem-sucesso");
+  const erro = document.getElementById("mensagem-erro");
+
+  // Esconde mensagens anteriores
+  sucesso.classList.add("hidden");
+  erro.classList.add("hidden");
+
+  if (!tipoRelato || !descricao || parametros.length === 0) {
+    erro.classList.remove("hidden");
+    erro.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+
+  try {
+    const user = await window.supabase.auth.getUser();
+    const { data, error } = await window.supabase.from("relatos_tecnicos").insert([{
+      user_id: user.data.user?.id ?? null,
+      tipo_relato: tipoRelato,
+      parametros: parametros,
+      descricao: descricao,
+      latitude: latitude,
+      longitude: longitude,
+      data_envio: new Date().toISOString()
+    }]);
+
+    if (error) throw error;
+
+    sucesso.classList.remove("hidden");
+    sucesso.scrollIntoView({ behavior: "smooth" });
+
+    // Limpa o formulário
+    document.getElementById("tipo_relato").value = "";
+    document.getElementById("descricao").value = "";
+    document.getElementById("parametros-container").innerHTML = "";
+
+    // Recarrega os relatos após o envio bem-sucedido
+    await carregarMeusRelatos();
+  } catch (e) {
+    erro.classList.remove("hidden");
+    erro.scrollIntoView({ behavior: "smooth" });
+    console.error("Erro ao enviar relato:", e.message); // Logar o erro para depuração
+  }
+
+  setTimeout(() => {
+    sucesso.classList.add("hidden");
+    erro.classList.add("hidden");
+  }, 5000);
+}
+</script>
+
+<script>
+let tiposParametrosDinamicos = {};
+
+async function carregarTiposRelatoDoBanco() {
+  // Verifica se a variável 'supabase' já está definida antes de tentar usá-la
+  if (typeof window.supabase === 'undefined') {
+    console.warn("Supabase client not yet defined when trying to load report types. Retrying...");
+    setTimeout(carregarTiposRelatoDoBanco, 200);
+    return;
+  }
+
+  const { data: tipos, error: erroTipos } = await window.supabase.from("tipos_relatos").select("*");
+  if (erroTipos || !tipos.length) {
+    console.error("Erro ao carregar tipos de relato:", erroTipos);
+    return;
+  }
+
+  const selectTipo = document.getElementById("tipo_relato");
+  // Limpa as opções existentes (as hardcoded do HTML)
+  selectTipo.innerHTML = '<option value="">Selecione...</option>';
+  selectTipo.innerHTML += tipos.map(t => `<option value="<span class="math-inline">\{t\.id\}"\></span>{t.nome_tipo}</option>`).join("");
+
+  tipos.forEach(tipo => {
+    tiposParametrosDinamicos[tipo.id] = { nome: tipo.nome_tipo, parametros: [] };
+  });
+
+  const { data: parametros, error: erroParams } = await window.supabase.from("parametros_padrao").select("*");
+  if (erroParams) {
+    console.error("Erro ao carregar parâmetros:", erroParams);
+    return;
+  }
+
+  parametros.forEach(p => {
+    if (tiposParametrosDinamicos[p.tipo_relato_id]) {
+      tiposParametrosDinamicos[p.tipo_relato_id].parametros.push(p.nome_parametro);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // A chamada para carregarTiposRelatoDoBanco agora é disparada pelo script de inicialização do supabase.
+  // document.addEventListener("DOMContentLoaded", initializeSupabaseClient); já está no final do body, e chama as funçoes.
+  // await carregarTiposRelatoDoBanco(); // Removido ou comentado aqui
+
+  document.getElementById("tipo_relato").addEventListener("change", function () {
+    const tipoId = this.value;
+    const container = document.getElementById("parametros-container");
+    container.innerHTML = "";
+
+    const tipo = tiposParametrosDinamicos[tipoId];
+    if (!tipo || !tipo.parametros.length) {
+      container.innerHTML = "<em>Sem parâmetros disponíveis.</em>";
+      return;
+    }
+
+    tipo.parametros.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "border-b pb-2 mb-2";
+      div.innerHTML = `
+        <label class="font-semibold text-gray-800"><span class="math-inline">\{p\}</label\><br/\>
+<input type\="checkbox" name\="parametros" value\="</span>{p}" class="mr-1"> Tenho este dado<br/>
+        <input type="file" name="upload_${p}" class="mt-1 text-sm"><br/>
+        <button type="button" onclick="puxarSollytch('${p}')" class="text-blue-600 underline text-sm mt-1">🔗 Puxar da Sollytch View</button>
+      `;
+      container.appendChild(div);
+    });
+  });
+});
+</script>
+
+
+<script>
+let camadaMicrobacias; // Esta variável já está declarada no seu código.
+// A variável 'relatosTodos' foi movida para o script anterior e é global.
+let camadaNDVI = L.esri.imageMapLayer({
+  url: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services/NDVI/ImageServer'
+});
+
+const camadas = {
+  solo: L.tileLayer.wms("https://geoserver.mapbiomas.org/geoserver/mapbiomas/wms", {
