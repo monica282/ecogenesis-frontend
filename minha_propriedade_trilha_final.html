@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha Propriedade – Ecogenesis Lab (MVP)</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/@supabase/supabase-js">}
+</script>
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="bg-main min-h-screen font-sans flex flex-col items-center">
+<header class="w-full bg-white py-4 shadow-sm border-b border-gray-200 text-center">
+  <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-2" />
+  <h1 class="text-2xl font-bold text-main">Minha Propriedade</h1>
+  <p class="text-sm text-gray-500">Trilha da Propriedade e Indicadores</p>
+</header>
+
+<main class="w-full max-w-5xl bg-white mt-8 p-6 rounded-lg shadow-md space-y-8">
+  <section class="flex flex-col md:flex-row md::justify-between gap-4">
+    <a href="formulario_diagnostico.html" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 text-sm">
+      ✏️ Atualizar Dados da Propriedade
+    </a>
+    <a href="relato_tecnico_upload_geolocalizado.html" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 text-sm">
+      ➕ Novo Relato Técnico
+    </a>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">📑 Relatos Técnicos</h2>
+    <p class="text-sm text-gray-800">Total de relatos: <span id="relato-count">Carregando...</span></p>
+    <ul id="relato-datas" class="list-disc pl-6 text-sm text-gray-700 space-y-1 mt-2"></ul>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">🧭 Trilha da Propriedade</h2>
+    <div id="checklist-container" class="space-y-2">
+      <p class="text-gray-500 text-sm">Carregando etapas do checklist...</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">📈 Indicadores da Propriedade</h2>
+    <div id="indicadores-container" class="space-y-4">
+      <p class="text-gray-500 text-sm">Carregando indicadores...</p>
+    </div>
+  </section>
+</main>
+
+<footer class="mt-12 text-center text-sm text-gray-500 py-6">
+  © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+</footer>
+
+
+<script src="https://unpkg.com/@supabase/supabase-js">}
+</script>
+<script>
+if (typeof supabase === 'undefined') {
+  console.error("Biblioteca Supabase não foi carregada corretamente.");
+} else {
+  const supabaseUrl = 'https://ntolffdyndrnkxrpmjzi.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY';
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const supabase = supabaseClient;
+  const supabaseUrl = 'https://ntolffdyndrnkxrpmjzi.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50b2xmZmR5bmRybmt4cnBtanppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTk0MTAsImV4cCI6MjA2NDU3NTQxMH0.ut__jKJedvqOo7M_2KepCFgybMBnDe_0RwBqkQZ--eY';
+  // já inicializado como supabaseClient
+
+  await carregarChecklist();
+  await carregarIndicadores();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    alert("Usuário não autenticado. Por favor, faça login novamente.");
+    return;
+  }
+
+  const { data: propriedades, error: erroProp } = await supabase
+    .from('propriedades')
+    .select('id')
+    .eq('usuario_id', user.id);
+
+  if (erroProp) {
+    console.error("Erro ao carregar propriedades do usuário:", erroProp);
+    alert("Erro ao carregar dados da propriedade.");
+    return;
+  }
+
+  if (!propriedades || propriedades.length === 0) {
+    document.getElementById('relato-count').textContent = '0';
+    document.getElementById('relato-datas').innerHTML = '<li>Nenhum relato encontrado.</li>';
+    return;
+  }
+
+  const ids = propriedades.map(p => p.id);
+  await carregarResumoRelatos(ids);
+
+  async function carregarChecklist() {
+    const { data, error } = await supabase.from('checklist_etapas').select('*').order('ordem');
+    const container = document.getElementById('checklist-container');
+    container.innerHTML = '';
+
+    if (error) {
+      container.innerHTML = '<p class="text-red-600">Erro ao carregar o checklist.</p>';
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">Nenhuma etapa encontrada.</p>';
+      return;
+    }
+
+    data.forEach(etapa => {
+      const statusIcon = etapa.status_usuario === 'concluido' ? '✔️' : etapa.status_usuario === 'pendente' ? '⏳' : '❌';
+      const statusColor = etapa.status_usuario === 'concluido' ? 'text-green-600' : etapa.status_usuario === 'pendente' ? 'text-yellow-600' : 'text-red-600';
+      container.innerHTML += `
+        <div class="flex items-center justify-between bg-gray-50 px-4 py-2 rounded shadow">
+          <span class="text-gray-800">${etapa.descricao}</span>
+          <span class="${statusColor} font-bold">${statusIcon}</span>
+        </div>`;
+    });
+  }
+
+  async function carregarIndicadores() {
+    const { data, error } = await supabase.from('indicadores').select('*').eq('ativo', true);
+    const container = document.getElementById('indicadores-container');
+    container.innerHTML = '';
+
+    if (error) {
+      container.innerHTML = '<p class="text-red-600">Erro ao carregar os indicadores.</p>';
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">Nenhum indicador ativo encontrado.</p>';
+      return;
+    }
+
+    data.forEach(indicador => {
+      const valorSimulado = (Math.random() * 5) + 1;
+      let classificacao = 'Desconhecido';
+      let cor = 'gray';
+      let faixas;
+
+      try {
+        faixas = JSON.parse(indicador.faixa_valores);
+      } catch (e) {
+        faixas = { bom: [0,0], razoavel: [0,0], critico: [0,0] };
+      }
+
+      if (valorSimulado >= faixas.bom[0] && valorSimulado <= faixas.bom[1]) {
+        classificacao = 'Bom'; cor = 'green';
+      } else if (valorSimulado >= faixas.razoavel[0] && valorSimulado <= faixas.razoavel[1]) {
+        classificacao = 'Razoável'; cor = 'yellow';
+      } else if (valorSimulado >= faixas.critico[0] && valorSimulado <= faixas.critico[1]) {
+        classificacao = 'Crítico'; cor = 'red';
+      }
+
+      container.innerHTML += `
+        <div class="border rounded p-4 bg-white shadow space-y-2">
+          <h3 class="font-semibold text-main">${indicador.nome}</h3>
+          <p class="text-gray-600 text-sm">Valor: <strong>${valorSimulado.toFixed(1)}</strong> ${indicador.unidade || ''}</p>
+          <div class="text-xs text-gray-500">Parâmetros utilizados: (ver painel admin)</div>
+          <div class="w-full h-2 bg-gray-200 rounded-full">
+            <div class="h-2 rounded-full bg-${cor}-500" style="width: ${(valorSimulado / 6) * 100}%;"></div>
+          </div>
+          <p class="text-sm mt-1 text-${cor}-700">Classificação: ${classificacao}</p>
+        </div>`;
+    });
+  }
+
+  async function carregarResumoRelatos(propriedadeIds) {
+    const { data, count, error } = await supabase
+      .from('relatos_tecnicos')
+      .select('data', { count: 'exact' })
+      .in('propriedade_id', propriedadeIds)
+      .order('data', { ascending: false });
+
+    const relatoCountSpan = document.getElementById('relato-count');
+    const listaRelatos = document.getElementById('relato-datas');
+    listaRelatos.innerHTML = '';
+
+    if (error) {
+      relatoCountSpan.textContent = 'Erro';
+      listaRelatos.innerHTML = '<li>Erro ao carregar relatos.</li>';
+      return;
+    }
+
+    relatoCountSpan.textContent = count;
+
+    if (!data || data.length === 0) {
+      listaRelatos.innerHTML = '<li>Nenhum relato técnico encontrado.</li>';
+      return;
+    }
+
+    data.forEach(r => {
+      const item = document.createElement('li');
+      item.textContent = new Date(r.data).toLocaleDateString();
+      listaRelatos.appendChild(item);
+    });
+  }
+});
+}
+</script>
+</body>
+</html>
