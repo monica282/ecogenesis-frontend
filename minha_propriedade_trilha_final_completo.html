@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha Propriedade – Ecogenesis Lab (MVP)</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #e3f2e9; }
+    .text-main { color: #14532d; }
+  </style>
+</head>
+<body class="bg-main min-h-screen font-sans flex flex-col items-center">
+<header class="w-full bg-white py-4 shadow-sm border-b border-gray-200 text-center">
+  <img src="logo_ecogenesis.png" alt="Logo Ecogenesis Lab" class="h-36 mx-auto mb-2" />
+  <h1 class="text-2xl font-bold text-main">Minha Propriedade</h1>
+  <p class="text-sm text-gray-500">Trilha da Propriedade e Indicadores</p>
+</header>
+
+<main class="w-full max-w-5xl bg-white mt-8 p-6 rounded-lg shadow-md space-y-8">
+  <section class="flex flex-col md:flex-row md::justify-between gap-4">
+    <a href="formulario_diagnostico.html" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 text-sm">
+      ✏️ Atualizar Dados da Propriedade
+    </a>
+    <a href="relato_tecnico_upload_geolocalizado.html" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 text-sm">
+      ➕ Novo Relato Técnico
+    </a>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">📑 Relatos Técnicos</h2>
+    <p class="text-sm text-gray-800">Total de relatos: <span id="relato-count">Carregando...</span></p>
+    <ul id="relato-datas" class="list-disc pl-6 text-sm text-gray-700 space-y-1 mt-2"></ul>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">🧭 Trilha da Propriedade</h2>
+    <div id="checklist-container" class="space-y-2">
+      <p class="text-gray-500 text-sm">Carregando etapas do checklist...</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-semibold text-main mb-2">📈 Indicadores da Propriedade</h2>
+    <div id="indicadores-container" class="space-y-6">
+      <p class="text-gray-500 text-sm">Carregando indicadores...</p>
+    </div>
+  </section>
+</main>
+
+<footer class="mt-12 text-center text-sm text-gray-500 py-6">
+  © 2025 Ecogenesis Lab · Deep Tech Lab · Todos os direitos reservados.
+</footer>
+
+<script>
+const supabase = supabase.createClient('https://ntolffdyndrnkxrpmjzi.supabase.co', 'eyJhbGciOi...');
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    alert("Usuário não autenticado. Por favor, faça login novamente.");
+    return;
+  }
+
+  await carregarChecklist();
+  await carregarIndicadores(user.id);
+  await carregarResumoRelatos(user.id);
+
+  async function carregarChecklist() {
+    const { data } = await supabase.from('checklist_etapas').select('*').order('ordem');
+    const container = document.getElementById('checklist-container');
+    container.innerHTML = '';
+    data.forEach(etapa => {
+      const statusIcon = etapa.status_usuario === 'concluido' ? '✔️' : etapa.status_usuario === 'pendente' ? '⏳' : '❌';
+      const statusColor = etapa.status_usuario === 'concluido' ? 'text-green-600' : etapa.status_usuario === 'pendente' ? 'text-yellow-600' : 'text-red-600';
+      container.innerHTML += `
+        <div class="flex items-center justify-between bg-gray-50 px-4 py-2 rounded shadow">
+          <span class="text-gray-800">${etapa.descricao}</span>
+          <span class="${statusColor} font-bold">${statusIcon}</span>
+        </div>`;
+    });
+  }
+
+  async function carregarIndicadores(usuarioId) {
+    const container = document.getElementById('indicadores-container');
+    container.innerHTML = '';
+    const { data: indicadores } = await supabase.from('indicadores').select('*').eq('ativo', true);
+    if (!indicadores || indicadores.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">Nenhum indicador ativo encontrado.</p>';
+      return;
+    }
+
+    for (const indicador of indicadores) {
+      const valor = (Math.random() * 5) + 1;
+      let classificacao = 'Desconhecido';
+      let cor = 'gray';
+      let faixas = { bom: [0, 0], razoavel: [0, 0], critico: [0, 0] };
+      try { faixas = JSON.parse(indicador.faixa_valores); } catch (e) {}
+
+      if (valor >= faixas.bom[0] && valor <= faixas.bom[1]) classificacao = 'Bom', cor = 'green';
+      else if (valor >= faixas.razoavel[0] && valor <= faixas.razoavel[1]) classificacao = 'Razoável', cor = 'yellow';
+      else if (valor >= faixas.critico[0] && valor <= faixas.critico[1]) classificacao = 'Crítico', cor = 'red';
+
+      const painel = document.createElement('div');
+      painel.className = "border rounded p-4 bg-white shadow space-y-2";
+      painel.innerHTML = `
+        <h3 class="font-semibold text-main">${indicador.nome}</h3>
+        <p class="text-gray-600 text-sm">Valor: <strong>${valor.toFixed(1)}</strong> ${indicador.unidade || ''}</p>
+        <div class="w-full h-2 bg-gray-200 rounded-full">
+          <div class="h-2 rounded-full bg-${cor}-500" style="width: ${(valor / 6) * 100}%"></div>
+        </div>
+        <p class="text-sm mt-1 text-${cor}-700">Classificação: ${classificacao}</p>
+        <div id="parametros-${indicador.id}" class="text-sm text-gray-700"></div>
+        <div id="graficos-${indicador.id}" class="space-y-4 pt-2"></div>
+      `;
+      container.appendChild(painel);
+
+      // carregar parâmetros
+      const { data: params } = await supabase.from('parametros_indicadores')
+        .select('parametros_padrao (nome)').eq('indicador_id', indicador.id);
+      const divParametros = document.getElementById(`parametros-${indicador.id}`);
+      if (params && params.length > 0) {
+        divParametros.innerHTML = '<strong>Parâmetros utilizados:</strong><ul class="list-disc pl-5 mt-1">' +
+          params.map(p => `<li>${p.parametros_padrao.nome}</li>`).join('') + '</ul>';
+      }
+
+      // carregar gráficos
+      const { data: graficos } = await supabase.from('graficos_indicadores').select('*').eq('indicador_id', indicador.id);
+      const divGraficos = document.getElementById(`graficos-${indicador.id}`);
+      graficos?.forEach((g, i) => {
+        const canvasId = `grafico-${indicador.id}-${i}`;
+        const graficoDiv = document.createElement('div');
+        graficoDiv.innerHTML = `<h4 class="text-sm font-semibold">${g.titulo}</h4><canvas id="${canvasId}" class="w-full h-64"></canvas>`;
+        divGraficos.appendChild(graficoDiv);
+        try {
+          const dados = JSON.parse(g.dados_json);
+          new Chart(document.getElementById(canvasId), {
+            type: g.tipo_grafico,
+            data: {
+              labels: dados.labels,
+              datasets: [{ label: g.titulo, data: dados.values, backgroundColor: ['#4caf50', '#81c784'], borderWidth: 1 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+          });
+        } catch (e) {
+          divGraficos.innerHTML += '<p class="text-red-600 text-xs">Erro ao carregar gráfico.</p>';
+        }
+      });
+    }
+  }
+
+  async function carregarResumoRelatos(usuarioId) {
+    const { data: propriedades } = await supabase.from('propriedades').select('id').eq('usuario_id', usuarioId);
+    const ids = propriedades.map(p => p.id);
+    const { data, count } = await supabase
+      .from('relatos_tecnicos')
+      .select('data', { count: 'exact' })
+      .in('propriedade_id', ids)
+      .order('data', { ascending: false });
+
+    const relatoCountSpan = document.getElementById('relato-count');
+    const listaRelatos = document.getElementById('relato-datas');
+    listaRelatos.innerHTML = '';
+    relatoCountSpan.textContent = count || 0;
+    data?.forEach(r => {
+      const item = document.createElement('li');
+      item.textContent = new Date(r.data).toLocaleDateString();
+      listaRelatos.appendChild(item);
+    });
+  }
+});
+</script>
+</body>
+</html>
