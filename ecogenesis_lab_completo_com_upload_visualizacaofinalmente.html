@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ecogenesis Lab - Plataforma Completa</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+    nav { width: 250px; background: #2e7d32; color: white; padding: 20px; }
+    nav h2 { font-size: 20px; margin-bottom: 20px; }
+    nav button { background: none; border: none; color: white; padding: 10px 0; text-align: left; width: 100%; cursor: pointer; font-size: 16px; }
+    nav button:hover { background-color: #388e3c; }
+    main { flex-grow: 1; padding: 20px; background: #f4f4f4; overflow-y: auto; }
+    .section { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .section.active { display: block; }
+    .download-btn { background: #1976d2; color: white; padding: 10px; margin: 5px 0; display: inline-block; text-decoration: none; border-radius: 4px; }
+    label, input, select, textarea { display: block; width: 100%; margin-top: 10px; }
+    button { margin-top: 20px; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+    /* Estilos específicos para a nova interface de parâmetros */
+    .parameter-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px; /* Espaçamento entre os itens */
+      border: 1px solid #ddd;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .parameter-item input[type="text"] {
+      flex-grow: 1; /* Permite que o input cresça */
+      margin-top: 0; /* Remove margin-top padrão */
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .parameter-item .remove-param-btn {
+      background: #d32f2f;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 0; /* Remove margin-top padrão */
+    }
+    .parameter-item .remove-param-btn:hover {
+      background: #c62828;
+    }
+    #parametros-container {
+      margin-top: 10px;
+      padding: 5px;
+      border: 1px solid #ccc; /* Adiciona uma borda para o contêiner */
+      border-radius: 4px;
+      min-height: 80px; /* Altura mínima para visualização */
+    }
+    #add-param-btn {
+        background: #007bff; /* Cor para o botão de adicionar */
+        margin-top: 15px;
+    }
+    #add-param-btn:hover {
+        background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h2>Ecogenesis Lab</h2>
+  <button onclick="showSection('cadastro')">📄 Cadastro de Modelos</button>
+  <button onclick="showSection('execucao')">⚙️ Execução de Simulações</button>
+  <button onclick="showSection('biblioteca')">📚 Biblioteca de Modelos</button>
+  <button onclick="showSection('upload')">📤 Upload de Modelo</button>
+</nav>
+
+<main>
+  <div id="cadastro" class="section">
+    <h2>Cadastro de Modelos</h2>
+    <a href="ecogenesis_admin_completo_v2.html" class="download-btn" target="_blank">➡️ Abrir Cadastro Avançado</a>
+  </div>
+
+  <div id="execucao" class="section">
+    <h2>Execução de Simulações</h2>
+    <label for="modelo">Modelo:</label>
+    <select id="modelo">
+      <option value="microbiano">Crescimento Microbiano</option>
+      <option value="mineralizacao">Mineralização do Nitrogênio</option>
+      <option value="lixiviacao">Lixiviação de Nutrientes</option>
+      <option value="pragas">Controle Biológico de Pragas</option>
+    </select>
+    <label>Parâmetros:</label>
+    <div id="parametros-container">
+      </div>
+    <button id="add-param-btn" onclick="addParameterField()">➕ Adicionar Parâmetro</button>
+    <a class="download-btn" onclick="gerarScript()">⬇️ Gerar Script Personalizado</a>
+    <p id="resultado"></p>
+  </div>
+
+  <div id="biblioteca" class="section">
+    <h2>Biblioteca de Modelos MATLAB</h2>
+    <p>Scripts prontos para download:</p>
+    <a href="https://raw.githubusercontent.com/monica282/ecogenesis-frontend/main/modelos_matlab/modelo_crescimento_microbiano.m" class="download-btn" download>Crescimento Microbiano</a><br>
+    <a href="https://raw.githubusercontent.com/monica282/ecogenesis-frontend/main/modelos_matlab/modelo_mineralizacao_nitrogenio.m" class="download-btn" download>Mineralização do Nitrogênio</a><br>
+    <a href="https://raw.githubusercontent.com/monica282/ecogenesis-frontend/main/modelos_matlab/modelo_lixiviacao_nutrientes.m" class="download-btn" download>Lixiviação de Nutrientes</a><br>
+    <a href="https://raw.githubusercontent.com/monica282/ecogenesis-frontend/main/modelos_matlab/modelo_controle_pragas.m" class="download-btn" download>Controle Biológico de Pragas</a><br>
+  </div>
+
+  <div id="upload" class="section active">
+    <h2>Upload de Modelo MATLAB para GitHub</h2>
+    <label for="filename">Nome do Arquivo (.m)</label>
+    <input type="text" id="filename" placeholder="ex: modelo_novo.m">
+    <label for="content">Conteúdo do Arquivo</label>
+    <textarea id="content" rows="10" placeholder="% Digite aqui seu código MATLAB..."></textarea>
+    <button onclick="uploadModelo()">📤 Enviar</button>
+    <p id="status"></p>
+  </div>
+</main>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Objeto para armazenar os parâmetros padrão de cada modelo
+const modelParameters = {
+  microbiano: [
+    { name: "taxa_crescimento", value: "0.5", comment: "Exemplo: taxa de crescimento microbiano" },
+    { name: "capacidade_suporte", value: "1000", comment: "Exemplo: população máxima" },
+    { name: "populacao_inicial", value: "10", comment: "Exemplo: população inicial" }
+  ],
+  mineralizacao: [
+    { name: "taxa_mineralizacao", value: "0.02", comment: "Exemplo: taxa de mineralização do nitrogênio" },
+    { name: "carbono_total", value: "5000", comment: "Exemplo: quantidade total de carbono" },
+    { name: "nitrogenio_total", value: "500", comment: "Exemplo: quantidade total de nitrogênio" }
+  ],
+  lixiviacao: [
+    { name: "volume_agua", value: "200", comment: "Exemplo: volume de água" },
+    { name: "concentracao_inicial", value: "100", comment: "Exemplo: concentração inicial do nutriente" },
+    { name: "coeficiente_dispersao", value: "0.1", comment: "Exemplo: coeficiente de dispersão" }
+  ],
+  pragas: [
+    { name: "populacao_praga", value: "1000", comment: "Exemplo: número inicial de pragas" },
+    { name: "populacao_predador", value: "50", comment: "Exemplo: número inicial de predadores" },
+    { name: "taxa_reproducao_praga", value: "1.2", comment: "Exemplo: taxa de reprodução da praga" }
+  ]
+};
+
+// Renderiza os campos de parâmetros na interface
+function renderParameters(params = []) {
+  const container = document.getElementById("parametros-container");
+  container.innerHTML = ''; // Limpa o contêiner atual
+
+  if (params.length === 0) {
+      container.innerHTML = '<p style="color: #666; font-style: italic;">Nenhum parâmetro definido. Clique em "Adicionar Parâmetro" para começar.</p>';
+  }
+
+  params.forEach(param => {
+    const paramDiv = document.createElement("div");
+    paramDiv.classList.add("parameter-item");
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "Nome do Parâmetro";
+    nameInput.value = param.name || '';
+    nameInput.dataset.type = "name"; // Para fácil identificação
+
+    const valueInput = document.createElement("input");
+    valueInput.type = "text";
+    valueInput.placeholder = "Valor do Parâmetro";
+    valueInput.value = param.value || '';
+    valueInput.dataset.type = "value"; // Para fácil identificação
+
+    const commentInput = document.createElement("input");
+    commentInput.type = "text";
+    commentInput.placeholder = "Comentário (opcional)";
+    commentInput.value = param.comment || '';
+    commentInput.dataset.type = "comment"; // Para fácil identificação
+    commentInput.style.flexGrow = "2"; // Comentário pode ser maior
+
+    const removeBtn = document.createElement("button");
+    removeBtn.classList.add("remove-param-btn");
+    removeBtn.textContent = "Remover";
+    removeBtn.onclick = () => removeParameterField(paramDiv);
+
+    paramDiv.appendChild(nameInput);
+    paramDiv.appendChild(valueInput);
+    paramDiv.appendChild(commentInput);
+    paramDiv.appendChild(removeBtn);
+
+    container.appendChild(paramDiv);
+  });
+}
+
+// Adiciona um novo campo de parâmetro vazio
+function addParameterField() {
+    renderParameters([...getCurrentParameters(), { name: "", value: "", comment: "" }]);
+}
+
+// Remove um campo de parâmetro específico
+function removeParameterField(paramDivToRemove) {
+    paramDivToRemove.remove();
+    // Atualiza a mensagem se não houver mais parâmetros
+    const container = document.getElementById("parametros-container");
+    if (container.children.length === 0) {
+        container.innerHTML = '<p style="color: #666; font-style: italic;">Nenhum parâmetro definido. Clique em "Adicionar Parâmetro" para começar.</p>';
+    }
+}
+
+// Obtém os parâmetros atualmente visíveis na interface
+function getCurrentParameters() {
+    const container = document.getElementById("parametros-container");
+    const paramItems = container.querySelectorAll(".parameter-item");
+    const currentParams = [];
+
+    paramItems.forEach(item => {
+        const nameInput = item.querySelector('input[data-type="name"]');
+        const valueInput = item.querySelector('input[data-type="value"]');
+        const commentInput = item.querySelector('input[data-type="comment"]');
+
+        if (nameInput && valueInput) { // Apenas adiciona se nome e valor existirem
+            currentParams.push({
+                name: nameInput.value,
+                value: valueInput.value,
+                comment: commentInput ? commentInput.value : ""
+            });
+        }
+    });
+    return currentParams;
+}
+
+// Função chamada quando o modelo é selecionado
+function updateParametersOnModelChange() {
+  const modelo = document.getElementById("modelo").value;
+  const params = modelParameters[modelo] || [];
+  renderParameters(params);
+}
+
+function gerarScript() {
+  const modelo = document.getElementById("modelo").value;
+  const parametrosAtuais = getCurrentParameters(); // Pega os parâmetros da interface
+
+  let scriptText = `%% Script para o Modelo: ${modelo}\n\n`;
+  if (parametrosAtuais.length > 0) {
+      scriptText += "%% Parâmetros da Simulação:\n";
+      parametrosAtuais.forEach(param => {
+          if (param.name) { // Garante que o nome do parâmetro não está vazio
+              scriptText += `${param.name} = ${param.value};`;
+              if (param.comment) {
+                  scriptText += ` % ${param.comment}`;
+              }
+              scriptText += "\n";
+          }
+      });
+      scriptText += "\n";
+  } else {
+      scriptText += "%% Nenhum parâmetro definido para esta simulação.\n\n";
+  }
+
+  scriptText += `%% Lógica do Modelo (Exemplo - Substitua pelo seu código MATLAB real)\n`;
+  scriptText += `disp('Executando simulação de ${modelo}...');\n`;
+  scriptText += `%% ... seu código MATLAB aqui ...\n`;
+
+
+  document.getElementById("resultado").innerText = scriptText;
+}
+
+async function uploadModelo() {
+  const filename = document.getElementById("filename").value;
+  const content = document.getElementById("content").value;
+
+  // IMPORTANTE: Esta parte requer um backend rodando para funcionar!
+  // Por enquanto, vamos desabilitar a chamada real para o servidor
+  // para focar na funcionalidade do frontend, como conversamos.
+  const status = document.getElementById("status");
+  status.innerText = "Funcionalidade de upload desabilitada por enquanto. Focando na edição de parâmetros.";
+  status.style.color = "orange";
+
+  /*
+  // Código original para referência, será reativado em fase posterior
+  const res = await fetch("/api/upload_modelo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename, content })
+  });
+
+  const data = await res.json();
+  const status = document.getElementById("status");
+  if (res.ok) {
+    status.innerText = "✅ Upload realizado com sucesso!";
+    status.style.color = "green";
+  } else {
+    status.innerText = "❌ Erro: " + data.message;
+    status.style.color = "red";
+  }
+  */
+}
+
+// Inicialização: carrega a seção de execução e os parâmetros do modelo padrão
+document.addEventListener('DOMContentLoaded', (event) => {
+    showSection('execucao'); // Garante que a seção de execução esteja ativa
+    updateParametersOnModelChange(); // Carrega os parâmetros iniciais
+    document.getElementById('modelo').addEventListener('change', updateParametersOnModelChange); // Atualiza ao mudar o modelo
+});
+</script>
+</body>
+</html>
