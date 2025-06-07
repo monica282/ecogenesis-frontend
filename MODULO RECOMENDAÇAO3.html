@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Recomendações - Ecogenesis Lab</title>
+  <style>
+    /* Estilos Globais e Reset */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      display: flex; /* Para layout de sidebar */
+      height: 100vh; /* Ocupa a altura total da viewport */
+      background-color: #f0f2f5; /* Fundo suave */
+    }
+
+    /* Navegação Lateral (Sidebar) */
+    nav {
+      width: 260px; /* Largura da sidebar */
+      background-color: #2e7d32; /* Verde escuro do Ecogenesis */
+      color: white;
+      padding: 20px 0; /* Padding vertical */
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0; /* Não permite que a sidebar encolha */
+    }
+    nav .logo-sidebar {
+        height: 60px;
+        margin-bottom: 25px;
+    }
+    nav h2 {
+      font-size: 1.6em;
+      margin-bottom: 30px;
+      color: #e6f4ea; /* Cor mais clara para o título */
+      text-align: center;
+      padding: 0 20px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: white;
+      padding: 15px 20px; /* Mais padding para botões */
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+      font-size: 1.1em;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px; /* Espaço entre ícone e texto */
+    }
+    nav button:hover, nav button.active {
+      background-color: #388e3c; /* Um verde um pouco mais claro no hover/ativo */
+      border-left: 5px solid #84c29c; /* Indicador visual de ativo */
+      padding-left: 15px; /* Ajusta padding por causa da borda */
+    }
+    nav button.active {
+        font-weight: bold;
+    }
+
+    /* Conteúdo Principal */
+    main {
+      flex-grow: 1; /* Ocupa o restante do espaço */
+      padding: 25px;
+      overflow-y: auto; /* Permite scroll se o conteúdo for grande */
+    }
+    .section-content {
+      display: none; /* Esconde todas as seções por padrão */
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 25px; /* Espaço entre as seções caso mais de uma seja ativa */
+    }
+    .section-content.active {
+      display: block; /* Mostra a seção ativa */
+    }
+
+    /* Títulos dentro das seções */
+    .section-content h2 {
+      color: #2e7031;
+      font-size: 1.8em;
+      margin-bottom: 25px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e6f4ea;
+    }
+    .section-content h3 {
+        color: #4CAF50; /* Um verde mais claro para subtítulos */
+        font-size: 1.4em;
+        margin-top: 30px;
+        margin-bottom: 15px;
+    }
+
+    /* Formulários e Inputs */
+    label {
+      display: block;
+      margin: 15px 0 8px;
+      font-weight: bold;
+      color: #444;
+    }
+    input[type="number"],
+    select,
+    textarea {
+      width: calc(100% - 24px); /* Ajusta para padding e borda */
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    /* Botões */
+    button {
+      padding: 12px 25px;
+      background-color: #2e7031;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.05em;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #245726;
+      transform: translateY(-2px);
+    }
+    button.delete-btn {
+      background-color: #d9534f;
+    }
+    button.delete-btn:hover {
+      background-color: #c9302c;
+    }
+
+    /* Tags de Seleção */
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tag {
+      background-color: #e6f4ea;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 1px solid #c9e7d4;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .tag:hover {
+      background-color: #d1ecdb;
+    }
+    .tag.selected {
+      background-color: #84c29c;
+      color: white;
+      border-color: #6aab85;
+    }
+
+    /* Saídas de Recomendação */
+    .recommendation-output {
+      background-color: #e6f4ea;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      border: 1px dashed #a8d5b8;
+      font-size: 1.1em;
+      color: #2e7031;
+      word-wrap: break-word; /* Garante que o texto não vaze */
+    }
+    .recommendation-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      background-color: #fdfdfd;
+    }
+    .recommendation-item textarea {
+      flex: 1;
+      margin: 0;
+      height: auto;
+    }
+    .recommendation-item .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    ul#visualizacao-recomendacoes {
+        list-style: none;
+        padding: 0;
+    }
+    ul#visualizacao-recomendacoes li {
+        background-color: #eaf7ed;
+        padding: 12px 18px; /* Mais padding para visualização */
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border-left: 5px solid #2e7031;
+        font-size: 1em;
+        word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <img src="logomarca_ecogenesis.png" alt="Ecogenesis Lab" class="logo-sidebar" />
+  <h2>Painel de Recomendações</h2>
+  <button id="btn-simuladores" class="active" onclick="showSection('simuladores', this)">⚙️ Simuladores de Modelos</button>
+  <button id="btn-gerenciamento" onclick="showSection('gerenciamento', this)">📝 Gerenciamento de Recomendações</button>
+  <button id="btn-visualizacao" onclick="showSection('visualizacao', this)">👁️ Visualização de Recomendações</button>
+</nav>
+
+<main>
+  <div id="simuladores" class="section-content active">
+    <h2>Simuladores de Modelos</h2>
+
+    <h3>Simulador A - Classificação de Manejo</h3>
+    <label for="n">Nitrogênio Total (mg/kg):</label>
+    <input type="number" id="n" placeholder="Ex: 7.5" step="0.1"/>
+
+    <label for="cn">Relação C/N:</label>
+    <input type="number" id="cn" placeholder="Ex: 24" step="0.1"/>
+
+    <button onclick="simularModeloA()">Gerar Recomendação (Modelo A)</button>
+    <div id="saidaA" class="recommendation-output"></div>
+
+    <h3>Simulador B - Eficiência de Bioinsumo</h3>
+    <label for="dose">Dose do Bioinsumo (L/ha):</label>
+    <input type="number" id="dose" placeholder="Ex: 2.5" step="0.1">
+    <label for="cultura">Cultura:</label>
+    <select id="cultura">
+        <option value="milho">Milho</option>
+        <option value="feijao">Feijão</option>
+        <option value="tomate">Tomate</option>
+    </select>
+    <label for="fertilidade">Nível de Fertilidade:</label>
+    <select id="fertilidade">
+        <option value="baixa">Baixa</option>
+        <option value="media">Média</option>
+        <option value="alta">Alta</option>
+    </select>
+    <button onclick="simularModeloB()">Gerar Recomendação (Modelo B)</button>
+    <div id="saidaB" class="recommendation-output"></div>
+
+    <h3>Simulador de Manejo por Parâmetros e Condições</h3>
+    <label>Parâmetros Agronômicos Selecionados:</label>
+    <div class="tag-container" id="parametros">
+        <div class="tag" onclick="toggleTag(this)">Nitrogênio Total</div>
+        <div class="tag" onclick="toggleTag(this)">C/N</div>
+        <div class="tag" onclick="toggleTag(this)">pH</div>
+        <div class="tag" onclick="toggleTag(this)">Matéria Orgânica</div>
+    </div>
+
+    <label>Condições Relevantes:</label>
+    <div class="tag-container" id="condicoes">
+        <div class="tag" onclick="toggleTag(this)">Histórico de compactação</div>
+        <div class="tag" onclick="toggleTag(this)">Alta umidade prevista</div>
+        <div class="tag" onclick="toggleTag(this)">Disponibilidade de sementes</div>
+    </div>
+
+    <button onclick="sugerirManejoTags()">Sugerir Manejo com base nas Tags</button>
+    <div id="saidaTags" class="recommendation-output"></div>
+
+    <h3>Simuladores de Modelos Dinâmicos</h3>
+    <div id="simuladores-dinamicos">
+        </div>
+  </div>
+
+  <div id="gerenciamento" class="section-content">
+    <h2>Gerenciamento de Recomendações Oficiais</h2>
+
+    <label for="propriedade-select-gerenciamento">Selecionar Propriedade:</label>
+    <select id="propriedade-select-gerenciamento">
+      <option value="sito1">Sítio da Boa Esperança</option>
+      <option value="sito2">Chácara São José</option>
+    </select>
+
+    <h3>Recomendações Salvas para a Propriedade Selecionada</h3>
+    <div id="lista-recomendacoes">
+        </div>
+    <button onclick="adicionarNovaRecomendacao()">Adicionar Nova Recomendação Manual</button>
+  </div>
+
+  <div id="visualizacao" class="section-content">
+    <h2>Visualização de Recomendações (Técnico/Produtor)</h2>
+
+    <label for="propriedade-view">Visualizar Recomendações da Propriedade:</label>
+    <select id="propriedade-view">
+      <option value="sito1">Sítio da Boa Esperança</option>
+      <option value="sito2">Chácara São José</option>
+    </select>
+    <ul id="visualizacao-recomendacoes">
+        </ul>
+  </div>
+</main>
+
+<script>
+    // 1. Dados e Estruturas Iniciais (Simulando um Banco de Dados)
+    const modelosCadastrados = [
+      {
+        id: 'modeloC', // ID único para o modelo
+        nome: 'Modelo C - Risco de Lixiviação',
+        parametros: [
+          { id: 'chuva', label: 'Volume de Chuva (mm)', type: 'number', placeholder: 'Ex: 150' },
+          { id: 'inclinacao', label: 'Inclinação do Terreno (%)', type: 'number', placeholder: 'Ex: 10' },
+          { id: 'textura', label: 'Textura do Solo', type: 'select', options: ['Arenoso', 'Siltoso', 'Argiloso'] }
+        ],
+        // Função para simular o resultado do Modelo C
+        simular: (valores) => {
+          const chuva = parseFloat(valores.chuva);
+          const inclinacao = parseFloat(valores.inclinacao);
+          const textura = valores.textura;
+          let risco = 0;
+
+          if (isNaN(chuva) || isNaN(inclinacao)) {
+              return 'Por favor, preencha todos os campos numéricos.';
+          }
+
+          if (textura === 'Arenoso') {
+            risco += 0.5;
+          } else if (textura === 'Siltoso') {
+            risco += 0.2;
+          }
+
+          risco += (chuva / 200) * 0.3; // Quanto mais chuva, maior o risco
+          risco += (inclinacao / 30) * 0.2; // Quanto maior a inclinação, maior o risco
+
+          if (risco < 0.3) return 'Risco de Lixiviação: Baixo';
+          if (risco < 0.6) return 'Risco de Lixiviação: Médio';
+          return 'Risco de Lixiviação: Alto';
+        }
+      },
+      {
+        id: 'modeloD',
+        nome: 'Modelo D - Potencial de Sequestro de Carbono',
+        parametros: [
+          { id: 'biomassa', label: 'Biomassa (kg/m²)', type: 'number', placeholder: 'Ex: 2.5' },
+          { id: 'idadePlantio', label: 'Idade do Plantio (anos)', type: 'number', placeholder: 'Ex: 5' }
+        ],
+        simular: (valores) => {
+          const biomassa = parseFloat(valores.biomassa);
+          const idade = parseFloat(valores.idadePlantio);
+
+          if (isNaN(biomassa) || isNaN(idade)) {
+              return 'Por favor, preencha todos os campos numéricos.';
+          }
+
+          const sequestro = biomassa * idade * 0.05; // Exemplo de cálculo
+
+          return `Sequestro estimado: ${sequestro.toFixed(2)} tC/ha/ano`;
+        }
+      }
+    ];
+
+    // Estrutura para armazenar as recomendações por propriedade
+    // Simulando um banco de dados: { propriedadeId: [{ id: uniqueId, texto: "..." }, ...] }
+    // As recomendações salvas aqui persistem enquanto a página não é recarregada.
+    const recomendacoesPorPropriedade = {
+      sito1: [
+        { id: 'rec1_sito1', texto: 'Recomendação inicial para Sítio da Boa Esperança: Consórcio com Cobertura Morta.' },
+        { id: 'rec2_sito1', texto: 'Ajuste de pH e matéria orgânica para melhor desenvolvimento.' }
+      ],
+      sito2: [
+        { id: 'rec1_sito2', texto: 'Recomendação inicial para Chácara São José: Plantio Direto e rotação de culturas.' }
+      ]
+    };
+
+    // 2. Funções de Navegação entre Seções
+    function showSection(id, clickedButton) {
+      // Remove a classe 'active' de todas as seções e botões
+      document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+
+      // Adiciona a classe 'active' à seção e ao botão clicado
+      document.getElementById(id).classList.add('active');
+      clickedButton.classList.add('active');
+
+      // Atualiza as listas se as seções de gerenciamento/visualização forem ativadas
+      if (id === 'gerenciamento') {
+          atualizarLista();
+      } else if (id === 'visualizacao') {
+          atualizarVisualizacao();
+      }
+    }
+
+    // 3. Funções dos Simuladores Fixos (Modelo A, B e Tags)
+    function simularModeloA() {
+      const n = parseFloat(document.getElementById('n').value);
+      const cn = parseFloat(document.getElementById('cn').value);
+      let output = '';
+      if (isNaN(n) || isNaN(cn)) {
+        output = 'Por favor, insira valores numéricos para Nitrogênio e C/N.';
+      } else if (n < 10 && cn > 20) {
+        output = 'Adubação Verde com Leguminosas.';
+      } else if (n >= 10 && n <= 20 && cn >= 10 && cn <= 20) {
+        output = 'Consórcio com Adubação Verde + Cobertura Morta.';
+      } else if (n > 20 && cn < 10) {
+        output = 'Plantio Direto ou Cobertura sem Leguminosas.';
+      } else {
+        output = 'Sem recomendação específica com base nesses parâmetros.';
+      }
+      document.getElementById('saidaA').innerText = output;
+    }
+
+    function simularModeloB() {
+      const dose = parseFloat(document.getElementById('dose').value);
+      const cultura = document.getElementById('cultura').value;
+      const fertilidade = document.getElementById('fertilidade').value; // Não usado no cálculo, mas pode ser adicionado
+      let a = -2, b = 10, c = 40; // Valores padrão
+
+      if (isNaN(dose)) {
+        document.getElementById('saidaB').innerText = 'Por favor, insira um valor numérico para a dose.';
+        return;
+      }
+
+      if (cultura === 'milho') { a = -2; b = 12; c = 50; }
+      else if (cultura === 'feijao') { a = -1.5; b = 9; c = 45; }
+      else if (cultura === 'tomate') { a = -2.2; b = 11; c = 42; }
+
+      const produtividade = a * dose * dose + b * dose + c;
+      const recomendacao = `Produtividade estimada: ${produtividade.toFixed(1)} kg/ha. Dose aplicada: ${dose} L/ha.`;
+      document.getElementById('saidaB').innerText = recomendacao;
+    }
+
+    function toggleTag(tag) {
+      tag.classList.toggle('selected');
+    }
+
+    function sugerirManejoTags() {
+      const parametros = [...document.querySelectorAll('#parametros .tag.selected')].map(e => e.innerText);
+      const condicoes = [...document.querySelectorAll('#condicoes .tag.selected')].map(e => e.innerText);
+      let sugestao = 'Sem recomendação específica com base nas tags selecionadas.';
+
+      // Lógica de sugestão mais robusta
+      if (parametros.includes('Nitrogênio Total') && condicoes.includes('Histórico de compactação')) {
+        sugestao = 'Considerar Adubação Verde com Leguminosas para melhorar a estrutura do solo e o nitrogênio.';
+      } else if (parametros.includes('C/N') && condicoes.includes('Alta umidade prevista')) {
+        sugestao = 'Foco em Consórcio com Cobertura Morta para controle de umidade e aporte de matéria orgânica.';
+      } else if (parametros.includes('pH') && parametros.includes('Matéria Orgânica')) {
+          sugestao = 'Analisar correção de pH e manejo de matéria orgânica para otimização da absorção de nutrientes.';
+      } else if (condicoes.includes('Disponibilidade de sementes')) {
+          sugestao = 'Explorar Plantio Direto com espécies de cobertura adaptadas à disponibilidade.';
+      }
+
+      document.getElementById('saidaTags').innerText = sugestao;
+    }
+
+    // 4. Funções para Simuladores Dinâmicos
+    function renderizarSimuladoresDinamicos() {
+      const container = document.getElementById('simuladores-dinamicos');
+      container.innerHTML = ''; // Limpa o container antes de renderizar
+
+      modelosCadastrados.forEach(modelo => {
+        const div = document.createElement('div');
+        div.className = 'form-section'; // Pode usar uma classe para estilizar os modelos dinâmicos individualmente
+        div.innerHTML = `<h4>${modelo.nome}</h4>`; // Subtítulo para cada modelo dinâmico
+
+        const inputsMap = {}; // Para armazenar referências aos inputs
+
+        modelo.parametros.forEach(param => {
+          const label = document.createElement('label');
+          label.innerText = param.label;
+          div.appendChild(label);
+
+          if (param.type === 'number') {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = `${modelo.id}-${param.id}`;
+            input.placeholder = param.placeholder || '';
+            input.step = '0.1';
+            div.appendChild(input);
+            inputsMap[param.id] = input;
+          } else if (param.type === 'select') {
+            const select = document.createElement('select');
+            select.id = `${modelo.id}-${param.id}`;
+            param.options.forEach(optionText => {
+              const option = document.createElement('option');
+              option.value = optionText;
+              option.innerText = optionText;
+              select.appendChild(option);
+            });
+            div.appendChild(select);
+            inputsMap[param.id] = select;
+          }
+        });
+
+        const output = document.createElement('div');
+        output.id = `saida-${modelo.id}`;
+        output.className = 'recommendation-output';
+        div.appendChild(output);
+
+        const rodarBtn = document.createElement('button');
+        rodarBtn.innerText = `Gerar Recomendação (${modelo.nome})`;
+        rodarBtn.onclick = () => {
+          const valores = {};
+          modelo.parametros.forEach(param => {
+            valores[param.id] = inputsMap[param.id].value;
+          });
+          const resultado = modelo.simular(valores);
+          output.innerText = resultado;
+        };
+        div.appendChild(rodarBtn);
+
+        const salvarBtn = document.createElement('button');
+        salvarBtn.innerText = 'Salvar Recomendação Oficial';
+        salvarBtn.onclick = () => {
+          const propriedade = document.getElementById('propriedade-select-gerenciamento').value; // Usando a select do gerenciamento
+          const texto = output.innerText;
+          // Impede salvar mensagens de erro como recomendação
+          if (texto && propriedade && !texto.includes('Por favor, preencha')) {
+            const newId = `rec_${Date.now()}`;
+            recomendacoesPorPropriedade[propriedade].push({ id: newId, texto: texto });
+            alert('Recomendação salva com sucesso!');
+            // Não atualiza as listas aqui, pois o usuário está na seção de simuladores.
+            // As listas serão atualizadas automaticamente quando o usuário mudar para a seção de gerenciamento/visualização.
+          } else {
+            alert('Gere uma recomendação válida e selecione uma propriedade para salvar.');
+          }
+        };
+        div.appendChild(salvarBtn);
+
+        container.appendChild(div);
+      });
+    }
+
+    // 5. Funções de Gerenciamento de Recomendações
+    function atualizarLista() {
+      // Usa a select específica da seção de gerenciamento
+      const propriedadeId = document.getElementById('propriedade-select-gerenciamento').value;
+      const listaDiv = document.getElementById('lista-recomendacoes');
+      listaDiv.innerHTML = ''; // Limpa a lista existente
+
+      const recomendacoesDaPropriedade = recomendacoesPorPropriedade[propriedadeId] || [];
+
+      if (recomendacoesDaPropriedade.length === 0) {
+          listaDiv.innerText = 'Nenhuma recomendação salva para esta propriedade ainda.';
+          return;
+      }
+
+      recomendacoesDaPropriedade.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = 'recommendation-item';
+
+        const textarea = document.createElement('textarea');
+        textarea.value = rec.texto;
+        textarea.rows = 3;
+        item.appendChild(textarea);
+
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'btn-group';
+
+        const salvarBtn = document.createElement('button');
+        salvarBtn.innerText = 'Salvar Edição';
+        salvarBtn.onclick = () => {
+          rec.texto = textarea.value; // Atualiza o texto no array
+          atualizarVisualizacao(); // Atualiza a visualização (se a seção estiver visível)
+          alert('Recomendação atualizada!');
+        };
+        btnGroup.appendChild(salvarBtn);
+
+        const excluirBtn = document.createElement('button');
+        excluirBtn.innerText = 'Excluir';
+        excluirBtn.className = 'delete-btn';
+        excluirBtn.onclick = () => {
+          const confirmDelete = confirm('Tem certeza que deseja excluir esta recomendação?');
+          if (confirmDelete) {
+            const index = recomendacoesPorPropriedade[propriedadeId].findIndex(r => r.id === rec.id);
+            if (index > -1) {
+              recomendacoesPorPropriedade[propriedadeId].splice(index, 1);
+              atualizarLista(); // Re-renderiza a lista de gerenciamento
+              atualizarVisualizacao(); // Atualiza a visualização
+            }
+          }
+        };
+        btnGroup.appendChild(excluirBtn);
+
+        item.appendChild(btnGroup);
+        listaDiv.appendChild(item);
+      });
+    }
+
+    function adicionarNovaRecomendacao() {
+        const propriedadeId = document.getElementById('propriedade-select-gerenciamento').value;
+        const newId = `rec_${Date.now()}_manual`; // ID único para recomendação manual
+        recomendacoesPorPropriedade[propriedadeId].push({ id: newId, texto: 'Nova recomendação (edite aqui)...' });
+        atualizarLista(); // Re-renderiza a lista para incluir a nova recomendação
+    }
+
+    // 6. Funções de Visualização de Recomendações (Técnico/Produtor)
+    function atualizarVisualizacao() {
+      const propriedadeId = document.getElementById('propriedade-view').value;
+      const visualizacaoUl = document.getElementById('visualizacao-recomendacoes');
+      visualizacaoUl.innerHTML = ''; // Limpa a lista existente
+
+      const recomendacoesParaVisualizar = recomendacoesPorPropriedade[propriedadeId] || [];
+
+      if (recomendacoesParaVisualizar.length === 0) {
+          const li = document.createElement('li');
+          li.innerText = 'Nenhuma recomendação disponível para esta propriedade.';
+          visualizacaoUl.appendChild(li);
+          return;
+      }
+
+      recomendacoesParaVisualizar.forEach(rec => {
+        const li = document.createElement('li');
+        li.innerText = rec.texto;
+        visualizacaoUl.appendChild(li);
+      });
+    }
+
+    // 7. Inicialização da Página
+    document.addEventListener('DOMContentLoaded', () => {
+      // Renderiza os simuladores dinâmicos ao carregar a página
+      renderizarSimuladoresDinamicos();
+
+      // Configura os event listeners para as selects de propriedade
+      document.getElementById('propriedade-select-gerenciamento').addEventListener('change', atualizarLista);
+      document.getElementById('propriedade-view').addEventListener('change', atualizarVisualizacao);
+
+      // Garante que a seção "Simuladores de Modelos" esteja ativa ao carregar
+      showSection('simuladores', document.getElementById('btn-simuladores'));
+    });
+</script>
+</body>
+</html>

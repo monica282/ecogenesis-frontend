@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro Avançado de Modelos - Ecogenesis Lab Admin</title>
+  <style>
+    /* Estilos Gerais */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background-color: #ffffff;
+      padding: 15px 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .logo {
+      height: 55px;
+      margin-right: 20px;
+    }
+    h1 {
+      color: #2e7031;
+      font-size: 1.8em;
+      margin: 0;
+    }
+    .container {
+      max-width: 1000px; /* Largura um pouco maior para acomodar formulário */
+      margin: 25px auto;
+      padding: 30px;
+      background-color: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* Títulos de Seção */
+    .section-title {
+      color: #2e7031;
+      font-size: 1.6em;
+      margin-bottom: 25px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e6f4ea;
+    }
+    h3 {
+        color: #4CAF50;
+        font-size: 1.3em;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        border-bottom: 1px dashed #e6f4ea;
+        padding-bottom: 5px;
+    }
+
+    /* Formulários e Inputs */
+    label {
+      display: block;
+      margin: 15px 0 8px;
+      font-weight: bold;
+      color: #444;
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: calc(100% - 22px);
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    /* Botões */
+    button {
+      padding: 12px 25px;
+      background-color: #2e7031;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.05em;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #245726;
+      transform: translateY(-2px);
+    }
+    button.delete-btn {
+      background-color: #d9534f;
+    }
+    button.delete-btn:hover {
+      background-color: #c9302c;
+    }
+    button.add-btn {
+        background-color: #1a73e8; /* Azul para adicionar */
+    }
+    button.add-btn:hover {
+        background-color: #1764cc;
+    }
+    .action-buttons {
+        margin-top: 30px;
+        text-align: right; /* Alinha os botões Salvar/Limpar à direita */
+    }
+
+    /* Seção de Parâmetros Dinâmicos */
+    #parametros-container {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        background-color: #fcfcfc;
+        margin-bottom: 25px;
+    }
+    .param-item {
+        display: flex;
+        flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+        gap: 15px; /* Espaçamento entre os campos de um parâmetro */
+        align-items: flex-end; /* Alinha os itens na base */
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+    .param-item:last-child {
+        border-bottom: none; /* Remove a borda do último item */
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .param-item div {
+        flex: 1; /* Faz os divs tentarem ocupar espaço igual */
+        min-width: 150px; /* Largura mínima para os campos */
+    }
+    .param-item label {
+        margin-bottom: 5px; /* Ajusta a margem do label dentro do item */
+    }
+    .param-item input, .param-item select {
+        width: 100%; /* Ocupa toda a largura do seu div pai */
+        margin-bottom: 0; /* Remove margem inferior padrão */
+    }
+    .param-item .param-options-container {
+        flex-basis: 100%; /* Ocupa a linha inteira para as opções */
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dotted #ccc;
+    }
+    .param-item .param-options-container label {
+        font-weight: normal; /* Labels de opções menos proeminentes */
+    }
+    .param-item .param-options-container input {
+        display: inline-block;
+        width: calc(100% - 70px); /* Ajusta para o botão de remover opção */
+        vertical-align: middle;
+        margin-right: 5px;
+    }
+    .param-item .param-options-container button {
+        margin-top: 0;
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+    .param-item .remove-param-btn {
+        background-color: #f44336; /* Vermelho para remover parâmetro */
+        margin-left: 20px;
+        padding: 10px 15px;
+    }
+    .param-item .remove-param-btn:hover {
+        background-color: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logomarca_ecogenesis.png" alt="Ecogenesis Lab" class="logo" />
+    <h1>Admin - Cadastro Avançado de Modelos Agroecológicos</h1>
+  </header>
+
+  <div class="container">
+    <h2 class="section-title">Detalhes do Modelo Agroecológico</h2>
+
+    <label for="model-name">Nome do Modelo:</label>
+    <input type="text" id="model-name" placeholder="Ex: Modelo de Otimização de Irrigação"/>
+
+    <label for="model-description">Descrição:</label>
+    <textarea id="model-description" placeholder="Descreva brevemente a funcionalidade e aplicabilidade do modelo."></textarea>
+
+    <label for="matlab-models">Modelos MATLAB Associados (simulado):</label>
+    <select id="matlab-models" multiple size="4">
+      <option value="modelo_crescimento_microbiano.m">Crescimento Microbiano (modelo_crescimento_microbiano.m)</option>
+      <option value="modelo_mineralizacao_nitrogenio.m">Mineralização do Nitrogênio (modelo_mineralizacao_nitrogenio.m)</option>
+      <option value="modelo_lixiviacao_nutrientes.m">Lixiviação de Nutrientes (modelo_lixiviacao_nutrientes.m)</option>
+      <option value="modelo_controle_pragas.m">Controle Biológico de Pragas (modelo_controle_pragas.m)</option>
+      <option value="modelo_novo_irrigacao.m">Novo Modelo de Irrigação (modelo_novo_irrigacao.m)</option>
+      </select>
+    <small>Selecione um ou mais modelos MATLAB que este modelo agroecológico utiliza.</small>
+
+    <h3>Parâmetros de Entrada do Modelo Agroecológico</h3>
+    <div id="parametros-container">
+        <p id="no-params-message">Nenhum parâmetro adicionado ainda. Clique em "Adicionar Parâmetro".</p>
+    </div>
+    <button class="add-btn" onclick="addParameter()">+ Adicionar Parâmetro</button>
+
+    <h3>Lógica de Simulação (Pseudo-código / Regras)</h3>
+    <label for="simulation-logic">Insira a lógica de processamento do modelo (ex: JavaScript, pseudo-código ou regras):</label>
+    <textarea id="simulation-logic" rows="15" placeholder="// Exemplo:
+// if (chuva > 100 && textura === 'Arenoso') {
+//   return 'Risco de Lixiviação: Alto';
+// } else if (chuva < 50 && textura === 'Argiloso') {
+//   return 'Risco de Lixiviação: Baixo';
+// }
+// return 'Resultado padrão com base nos parâmetros.';
+"></textarea>
+    <small>No futuro, esta lógica será interpretada ou executada no servidor.</small>
+
+
+    <div class="action-buttons">
+      <button onclick="saveModel()">Salvar Modelo Agroecológico</button>
+      <button onclick="clearForm()">Limpar Formulário</button>
+    </div>
+  </div>
+
+  <script>
+    let parameterCounter = 0; // Para dar IDs únicos aos parâmetros
+
+    // Simula uma lista de modelos agroecológicos existentes
+    // No futuro, isso viria do Supabase
+    const existingModels = [
+        {
+            id: 'mod_1',
+            name: 'Manejo Otimizado de Nitrogênio',
+            description: 'Otimiza a aplicação de nitrogênio com base em C/N e tipo de solo.',
+            matlabModels: ['modelo_mineralizacao_nitrogenio.m'],
+            parameters: [
+                { id: 'nTotal', name: 'Nitrogênio Total', type: 'number', unit: 'mg/kg', options: '' },
+                { id: 'cnRatio', name: 'Relação C/N', type: 'number', unit: '', options: '' },
+                { id: 'soilType', name: 'Tipo de Solo', type: 'select', unit: '', options: 'Arenoso,Argiloso,Siltoso' }
+            ],
+            logic: "if (nTotal < 10 && cnRatio > 20) { return 'Adubação Verde com Leguminosas'; }"
+        },
+        // Adicionar outros modelos aqui para testar o carregamento
+    ];
+
+    // Função para carregar um modelo existente para edição (apenas para simulação de UI)
+    function loadModelForEdit(modelId) {
+        const model = existingModels.find(m => m.id === modelId);
+        if (model) {
+            document.getElementById('model-name').value = model.name;
+            document.getElementById('model-description').value = model.description;
+            document.getElementById('simulation-logic').value = model.logic;
+
+            // Selecionar modelos MATLAB associados
+            const matlabSelect = document.getElementById('matlab-models');
+            [...matlabSelect.options].forEach(option => {
+                option.selected = model.matlabModels.includes(option.value);
+            });
+
+            // Limpar e renderizar parâmetros existentes
+            const paramsContainer = document.getElementById('parametros-container');
+            paramsContainer.innerHTML = ''; // Limpa antes de adicionar
+            document.getElementById('no-params-message').style.display = 'none';
+
+            model.parameters.forEach(param => {
+                addParameter(param); // Chama a função addParameter com os dados existentes
+            });
+        }
+    }
+
+
+    // Função para adicionar um novo conjunto de campos para um parâmetro
+    function addParameter(paramData = {}) {
+        document.getElementById('no-params-message').style.display = 'none';
+        parameterCounter++;
+        const paramsContainer = document.getElementById('parametros-container');
+
+        const paramItem = document.createElement('div');
+        paramItem.className = 'param-item';
+        paramItem.setAttribute('data-param-id', parameterCounter);
+
+        paramItem.innerHTML = `
+            <div>
+                <label>Nome do Parâmetro:</label>
+                <input type="text" class="param-name" placeholder="Ex: Nitrogênio Total" value="${paramData.name || ''}" />
+            </div>
+            <div>
+                <label>Tipo:</label>
+                <select class="param-type">
+                    <option value="text" ${paramData.type === 'text' ? 'selected' : ''}>Texto</option>
+                    <option value="number" ${paramData.type === 'number' ? 'selected' : ''}>Número</option>
+                    <option value="select" ${paramData.type === 'select' ? 'selected' : ''}>Seleção (Dropdown)</option>
+                </select>
+            </div>
+            <div>
+                <label>Unidade (opcional):</label>
+                <input type="text" class="param-unit" placeholder="Ex: mg/kg" value="${paramData.unit || ''}" />
+            </div>
+            <button type="button" class="delete-btn remove-param-btn">Remover Parâmetro</button>
+            <div class="param-options-container" style="display: ${paramData.type === 'select' ? 'block' : 'none'}; flex-basis: 100%;">
+                <label>Opções de Seleção (separadas por vírgula):</label>
+                <textarea class="param-options" rows="2" placeholder="Ex: Milho,Feijão,Tomate">${paramData.options || ''}</textarea>
+            </div>
+        `;
+
+        paramsContainer.appendChild(paramItem);
+
+        // Adiciona evento para o botão de remover parâmetro
+        paramItem.querySelector('.remove-param-btn').onclick = function() {
+            paramsContainer.removeChild(paramItem);
+            if (paramsContainer.childElementCount === 1) { // Apenas a mensagem de 'nenhum parâmetro'
+                document.getElementById('no-params-message').style.display = 'block';
+            }
+        };
+
+        // Adiciona evento para mudar a visibilidade do campo de opções
+        const paramTypeSelect = paramItem.querySelector('.param-type');
+        const paramOptionsContainer = paramItem.querySelector('.param-options-container');
+        paramTypeSelect.addEventListener('change', function() {
+            if (this.value === 'select') {
+                paramOptionsContainer.style.display = 'block';
+            } else {
+                paramOptionsContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // Função para coletar os dados do formulário
+    function collectModelData() {
+        const modelName = document.getElementById('model-name').value;
+        const modelDescription = document.getElementById('model-description').value;
+        const simulationLogic = document.getElementById('simulation-logic').value;
+
+        const matlabSelect = document.getElementById('matlab-models');
+        const selectedMatlabModels = [...matlabSelect.options]
+                                     .filter(option => option.selected)
+                                     .map(option => option.value);
+
+        const parameters = [];
+        document.querySelectorAll('.param-item').forEach(item => {
+            const paramId = item.getAttribute('data-param-id');
+            const paramName = item.querySelector('.param-name').value;
+            const paramType = item.querySelector('.param-type').value;
+            const paramUnit = item.querySelector('.param-unit').value;
+            let paramOptions = '';
+
+            if (paramType === 'select') {
+                paramOptions = item.querySelector('.param-options').value;
+            }
+
+            if (paramName) { // Apenas adiciona se o nome do parâmetro não estiver vazio
+                parameters.push({
+                    id: `param_${paramId}`, // Gerar um ID mais significativo no futuro
+                    name: paramName,
+                    type: paramType,
+                    unit: paramUnit,
+                    options: paramOptions // String separada por vírgulas
+                });
+            }
+        });
+
+        return {
+            name: modelName,
+            description: modelDescription,
+            matlabModels: selectedMatlabModels,
+            parameters: parameters,
+            logic: simulationLogic
+        };
+    }
+
+    // Função para simular o salvamento do modelo
+    function saveModel() {
+        const modelData = collectModelData();
+        if (!modelData.name) {
+            alert('Por favor, insira o nome do Modelo Agroecológico.');
+            return;
+        }
+
+        console.log('Dados do Modelo a serem salvos:', modelData);
+        alert('Modelo Agroecológico salvo (simulação)! Consulte o console para ver os dados.');
+        // No futuro, aqui você faria a chamada à API do Supabase para salvar
+        // Ex: supabase.from('modelos_agroecologicos').insert([modelData]).then(...)
+        clearForm(); // Limpa o formulário após "salvar"
+    }
+
+    // Função para limpar o formulário
+    function clearForm() {
+        document.getElementById('model-name').value = '';
+        document.getElementById('model-description').value = '';
+        document.getElementById('simulation-logic').value = '';
+
+        const matlabSelect = document.getElementById('matlab-models');
+        [...matlabSelect.options].forEach(option => {
+            option.selected = false;
+        });
+
+        document.getElementById('parametros-container').innerHTML = '<p id="no-params-message">Nenhum parâmetro adicionado ainda. Clique em "Adicionar Parâmetro".</p>';
+        document.getElementById('no-params-message').style.display = 'block';
+        parameterCounter = 0; // Reseta o contador de parâmetros
+    }
+
+    // Inicialização: carrega um modelo de exemplo ao carregar a página para demonstração
+    document.addEventListener('DOMContentLoaded', () => {
+        // loadModelForEdit('mod_1'); // Descomente para testar o carregamento de um modelo existente
+    });
+  </script>
+</body>
+</html>
