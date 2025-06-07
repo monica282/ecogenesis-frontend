@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ecogenesis Lab - Validação</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4fdf8; margin: 0; padding: 0; }
+    header { background-color: #2e7d32; color: white; padding: 1rem; text-align: center; font-size: 1.6rem; font-weight: bold; }
+    .container { display: flex; }
+    nav { width: 220px; background-color: #e8f5e9; padding: 1rem; min-height: 100vh; }
+    nav ul { list-style: none; padding: 0; }
+    nav ul li { margin: 1rem 0; }
+    nav ul li a { text-decoration: none; color: #2e7d32; font-weight: bold; background-color: #c8e6c9; padding: 0.5rem; border-radius: 5px; display: inline-block; }
+    main { flex-grow: 1; padding: 2rem; background-color: white; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .tab-buttons { margin-bottom: 1rem; display: flex; flex-wrap: wrap; }
+    .tab-buttons button { margin-right: 1rem; padding: 0.6rem 1.2rem; font-weight: bold; background-color: #a5d6a7; border: none; border-radius: 5px; cursor: pointer; color: #1b5e20; white-space: nowrap; margin-bottom: 0.5rem; }
+    .tab-buttons button.active { background-color: #388e3c; color: white; }
+    h2 { color: #2e7d32; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 0.5rem; text-align: center; }
+    td[contenteditable] { background-color: #fffbe6; cursor: text; border: 1px dashed #ccc; }
+    td[contenteditable]:empty:before { content: attr(data-placeholder); color: #aaa; }
+    input[type="text"], select { padding: 0.5rem; margin: 0.5rem 0; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 0.5rem 1rem; margin: 0.5rem 0.3rem 0 0; background-color: #81c784; border: none; border-radius: 5px; color: #1b5e20; font-weight: bold; cursor: pointer; display: inline-block; }
+    button:hover { background-color: #66bb6a; }
+    .tag { display: inline-block; background-color: #e0f2f1; color: #004d40; border: 1px solid #80cbc4; border-radius: 15px; padding: 0.3rem 0.6rem; margin: 0.3rem; cursor: pointer; }
+    .parametro-box { display: inline-flex; align-items: center; background-color: #fff; border: 1px solid #ccc; padding: 0.3rem 0.5rem; border-radius: 5px; margin: 0.2rem; position: relative; }
+    .parametro-box .remove-btn { margin-left: 0.5rem; background-color: #f44336; color: white; border: none; border-radius: 50%; font-size: 0.7rem; width: 20px; height: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 0; }
+    .hidden { display: none !important; /* Força a ocultação */ }
+    #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    #modal-content { background-color: white; padding: 2rem; border-radius: 8px; text-align: center; }
+
+    .checkbox-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
+    .checkbox-group label { margin-bottom: 0.5rem; display: flex; align-items: center; }
+    .checkbox-group input[type="checkbox"] { margin-right: 0.5rem; }
+    #parametros-selecionados-container { margin-top: 1rem; border: 1px solid #eee; padding: 1rem; border-radius: 5px; min-height: 50px; }
+
+    /* Estilos para a notificação Toast */
+    #notification-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #dcedc8; /* Verde claro para didático */
+      color: #33691e; /* Texto verde mais escuro */
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1001;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #notification-toast.notification-show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Estilos para sinalização de tipo de usuário (opcional, para testes) */
+    #selecao-usuario-container {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background-color: #e8f5e9; /* Verde bem claro */
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    #selecao-usuario-container label {
+      font-weight: bold;
+      color: #2e7d32; /* Verde Ecogenesis */
+      margin-right: 1rem;
+    }
+
+    #selecao-usuario-container select {
+      padding: 0.5rem;
+      border: 1px solid #a5d6a7; /* Verde médio */
+      border-radius: 4px;
+      background-color: #f0fdf0; /* Quase branco com tom verde */
+      color: #1b5e20; /* Verde escuro */
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<header>Ecogenesis Lab - Módulo de Validação</header>
+<div class="container">
+  <nav>
+    <ul><li><a href="#">← Voltar à Recomendação</a></li></ul>
+  </nav>
+  <main>
+    <div class="tab-buttons">
+      <button onclick="openTab('config', this)" class="active">Plano de Teste</button>
+      <button onclick="openTab('resultados', this)">Visualização dos Resultados</button>
+      <button onclick="openTab('ajustes', this)">Ajustes e Considerações</button>
+    </div>
+
+    <div id="selecao-usuario-container">
+        <label for="selecao-usuario">Selecionar Tipo de Usuário (Apenas para Testes):</label>
+        <select id="selecao-usuario" onchange="mudarTipoUsuario(this.value)">
+            <option value="admin">Administrador</option>
+            <option value="tecnico">Técnico</option>
+            <option value="produtor">Produtor</option>
+        </select>
+    </div>
+    <div id="config" class="tab active">
+      <h2>Plano de Teste Experimental</h2>
+      <label>Tipo de delineamento:</label>
+      <select id="tipo-delineamento" onchange="gerarDOE()">
+        <option value="fatorial_2k">Fatorial 2^k</option>
+        <option value="composto_central">Composto Central</option>
+        <option value="fracionado">Fatorial Fracionado</option>
+      </select>
+
+      <h3>Selecionar parâmetros para o plano DOE:</h3>
+      <div id="parametros-checkbox-container" class="checkbox-group">
+        </div>
+      <input type="text" id="novo-parametro" placeholder="Adicionar novo parâmetro">
+      <button onclick="adicionarParametro()">Adicionar Parâmetro</button>
+
+      <h4>Parâmetros selecionados:</h4>
+      <div id="parametros-selecionados-container">
+        </div>
+
+      <h3>Outras condições relevantes:</h3>
+      <div id="condicoes-lista"></div>
+      <input type="text" id="nova-condicao" placeholder="Adicionar nova condição">
+      <button onclick="adicionarCondicao()">Adicionar Condição</button>
+
+      <br><br>
+      <button onclick="gerarDOE()">Gerar DOE com os parâmetros selecionados</button>
+      <button onclick="adicionarLinhaPersonalizada()">+ Adicionar nova linha personalizada</button>
+      <button onclick="enviarParaFusion()">Enviar para FUSION</button>
+
+      <h3>Simulação de plano DOE:</h3>
+      <table id="tabela-doe">
+        <tr><th>Ensaio</th></tr>
+      </table>
+    </div>
+
+    <div id="resultados" class="tab">
+      <h2>Visualização dos Resultados</h2>
+      <p>Aqui você poderá visualizar os resultados dos seus experimentos.</p>
+      </div>
+
+    <div id="ajustes" class="tab">
+      <h2>Ajustes e Considerações</h2>
+      <p>Aqui você poderá fazer ajustes finos e adicionar considerações sobre o plano.</p>
+      </div>
+  </main>
+</div>
+
+<div id="modal">
+  <div id="modal-content">
+    <p>Payload gerado com sucesso para o FUSION!</p>
+    <button onclick="baixarJSON()">Baixar JSON</button>
+    <button onclick="fecharModal()">Fechar</button>
+  </div>
+</div>
+
+<div id="notification-toast" class="notification-hidden"></div>
+
+<script>
+let usuario_tipo = "admin"; // Pode ser "admin", "tecnico", "produtor"
+let parametrosSelecionados = []; // Array para armazenar os parâmetros que estão selecionados
+
+// Nova função para exibir a notificação toast
+function showNotification(message) {
+  const toast = document.getElementById('notification-toast');
+  toast.textContent = message;
+  toast.classList.add('notification-show');
+
+  // Remove a notificação após 3 segundos
+  setTimeout(() => {
+    toast.classList.remove('notification-show');
+  }, 3000);
+}
+
+function mudarTipoUsuario(novoTipo) {
+  usuario_tipo = novoTipo;
+  atualizarVisibilidadeElementos(); // Reaplicar as permissões visuais
+  showNotification('Tipo de usuário alterado para: ' + novoTipo.charAt(0).toUpperCase() + novoTipo.slice(1));
+}
+
+function openTab(tabId, element) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.tab-buttons button').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  element.classList.add('active');
+}
+
+const parametrosRecomendacao = ["Dose do Bioinsumo", "Frequência", "pH do Solo", "Matéria Orgânica"];
+
+window.onload = () => {
+  renderizarParametrosDisponiveis();
+  gerarDOE(false); // Não mostra o toast na carga inicial da página
+  atualizarVisibilidadeElementos();
+  // Define o valor inicial do seletor de usuário para 'admin'
+  document.getElementById('selecao-usuario').value = 'admin';
+};
+
+function renderizarParametrosDisponiveis() {
+  const container = document.getElementById('parametros-checkbox-container');
+  container.innerHTML = '';
+  parametrosRecomendacao.forEach(p => {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = p;
+    input.checked = parametrosSelecionados.includes(p); // Marca o checkbox se o parâmetro já estiver selecionado
+    input.onchange = () => toggleParametro(p, input.checked);
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(p));
+    container.appendChild(label);
+  });
+  renderizarParametrosSelecionados();
+}
+
+function toggleParametro(parametro, isChecked) {
+  if (isChecked) {
+    if (!parametrosSelecionados.includes(parametro)) {
+      parametrosSelecionados.push(parametro);
+    }
+  } else {
+    parametrosSelecionados = parametrosSelecionados.filter(p => p !== parametro);
+  }
+  renderizarParametrosSelecionados();
+  gerarDOE(); // Gera o DOE ao mudar os parâmetros selecionados
+}
+
+function renderizarParametrosSelecionados() {
+  const container = document.getElementById('parametros-selecionados-container');
+  container.innerHTML = '';
+  parametrosSelecionados.forEach(p => {
+    const box = document.createElement('div');
+    box.className = 'parametro-box';
+    box.textContent = p;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = 'x';
+    removeBtn.onclick = () => removerParametroSelecionado(p);
+    box.appendChild(removeBtn);
+    container.appendChild(box);
+  });
+  atualizarVisibilidadeElementos(); // Garante que os botões de remoção sejam ocultados/exibidos corretamente
+}
+
+function adicionarParametro() {
+  const input = document.getElementById('novo-parametro');
+  const novoValor = input.value.trim();
+  if (!novoValor) return;
+
+  if (!parametrosRecomendacao.includes(novoValor)) {
+    parametrosRecomendacao.push(novoValor);
+  }
+  if (!parametrosSelecionados.includes(novoValor)) {
+    parametrosSelecionados.push(novoValor);
+  }
+  input.value = "";
+  renderizarParametrosDisponiveis();
+  renderizarParametrosSelecionados();
+  gerarDOE(); // Gera o DOE ao adicionar um novo parâmetro
+}
+
+function removerParametroSelecionado(parametroParaRemover) {
+  parametrosSelecionados = parametrosSelecionados.filter(p => p !== parametroParaRemover);
+  const checkbox = document.querySelector(`#parametros-checkbox-container input[value="${parametroParaRemover}"]`);
+  if (checkbox) {
+    checkbox.checked = false;
+  }
+  renderizarParametrosSelecionados();
+  gerarDOE(); // Gera o DOE ao remover um parâmetro
+}
+
+function adicionarCondicao() {
+  const nova = document.getElementById('nova-condicao').value;
+  if (!nova.trim()) return;
+  const span = document.createElement('span');
+  span.className = "tag";
+  span.textContent = nova;
+  span.onclick = () => span.remove();
+  document.getElementById('condicoes-lista').appendChild(span);
+  document.getElementById('nova-condicao').value = "";
+}
+
+function gerarDOE(showToast = true) { // Adiciona um parâmetro opcional para controlar o toast
+  const tabela = document.getElementById('tabela-doe');
+  const tipoDelineamento = document.getElementById('tipo-delineamento').value;
+
+  // Garante que o cabeçalho da tabela sempre tenha a coluna "Ensaio" e os parâmetros selecionados
+  let headerHTML = `<tr><th>Ensaio</th>`;
+  headerHTML += parametrosSelecionados.map(p => `<th>${p}</th>`).join('');
+  headerHTML += `</tr>`;
+  tabela.innerHTML = headerHTML;
+
+  // Lógica para preencher a tabela
+  if (parametrosSelecionados.length === 0) {
+    if (showToast) {
+      showNotification("Nenhum parâmetro selecionado. A tabela DOE exibe apenas o cabeçalho.");
+    }
+    // Não precisamos de "return" aqui se quisermos que a tabela seja criada com apenas o cabeçalho "Ensaio"
+  } else {
+    let combos = [];
+    if (tipoDelineamento === 'fatorial_2k') {
+      // Geração automática para Fatorial 2^k
+      combos = getAllCombinations(parametrosSelecionados.length);
+    } else {
+      // Para outros tipos, gera uma linha vazia editável para cada parâmetro
+      combos = Array.from({ length: 1 }, () => Array.from({ length: parametrosSelecionados.length }, () => ''));
+    }
+
+    combos.forEach((combo, i) => {
+      tabela.innerHTML += `<tr><td>${i+1}</td>${combo.map(v => `<td contenteditable data-placeholder=\"Editar...\">${v}</td>`).join('')}</tr>`;
+    });
+  }
+
+  // Reaplicar a visibilidade de edição para técnicos, caso a tabela seja regenerada
+  atualizarVisibilidadeElementos();
+
+  // Aviso de acionamento do botão "Gerar DOE" usando o toast, se showToast for true
+  if (showToast && parametrosSelecionados.length > 0) {
+    showNotification("DOE gerado/atualizado com sucesso!");
+  }
+}
+
+
+function getAllCombinations(n) {
+  const levels = ["Baixo", "Alto"];
+  const total = Math.pow(2, n);
+  return Array.from({ length: total }, (_, i) =>
+    Array.from({ length: n }, (_, j) => (i & (1 << j)) ? levels[1] : levels[0])
+  );
+}
+
+function adicionarLinhaPersonalizada() {
+  const tabela = document.getElementById('tabela-doe');
+  const cols = tabela.rows[0]?.cells.length || 1; // Pega o número de colunas do cabeçalho
+  const linha = document.createElement('tr');
+  linha.innerHTML = `<td>${tabela.rows.length}</td>` + Array.from({ length: cols - 1 }, () => `<td contenteditable data-placeholder=\"Editar...\"></td>`).join('');
+  tabela.appendChild(linha);
+
+  // Reaplicar a visibilidade de edição para técnicos, caso a tabela seja alterada
+  atualizarVisibilidadeElementos();
+}
+
+function enviarParaFusion() {
+  const parametros = parametrosSelecionados.map(p => ({
+    nome: p,
+    // Os níveis não são definidos aqui, pois vêm da tabela
+    niveis: []
+  }));
+  const condicoes = Array.from(document.querySelectorAll('#condicoes-lista .tag')).map(tag => tag.textContent);
+  const tipo = document.getElementById('tipo-delineamento').value;
+
+  const tabelaDados = [];
+  const linhas = document.querySelectorAll('#tabela-doe tr');
+  if (linhas.length > 1) { // Ignora o cabeçalho
+    const headerCells = Array.from(linhas[0].cells).map(cell => cell.textContent.trim());
+    for (let i = 1; i < linhas.length; i++) {
+      const row = linhas[i];
+      const rowData = {};
+      const cells = Array.from(row.cells);
+      rowData[headerCells[0]] = cells[0].textContent.trim(); // Coluna "Ensaio"
+      for (let j = 1; j < cells.length; j++) {
+        rowData[headerCells[j]] = cells[j].textContent.trim();
+      }
+      tabelaDados.push(rowData);
+    }
+  }
+
+  const payload = {
+    recomendacao_id: "rec_123",
+    usuario: usuario_tipo,
+    tipo_delineamento: tipo,
+    parametros: parametros, // Aqui você pode incluir os parâmetros selecionados
+    condicoes_adicionais: condicoes,
+    dados_plano_doe: tabelaDados
+  };
+  window.payloadFusion = payload;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function baixarJSON() {
+  const blob = new Blob([JSON.stringify(window.payloadFusion, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'payload_fusion.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function atualizarVisibilidadeElementos() {
+  const isAdmin = (usuario_tipo === "admin");
+  const isTecnico = (usuario_tipo === "tecnico");
+  const isProdutor = (usuario_tipo === "produtor");
+
+  // Elementos do Administrador
+  document.getElementById('novo-parametro').classList.toggle('hidden', !isAdmin);
+  document.querySelector('button[onclick="adicionarParametro()"]').classList.toggle('hidden', !isAdmin);
+  document.getElementById('tipo-delineamento').disabled = !isAdmin;
+  document.getElementById('nova-condicao').classList.toggle('hidden', !isAdmin);
+  document.querySelector('button[onclick="adicionarCondicao()"]').classList.toggle('hidden', !isAdmin);
+  document.querySelector('button[onclick="adicionarLinhaPersonalizada()"]').classList.toggle('hidden', !isAdmin);
+
+  // Ocultar/desabilitar checkboxes para técnico e produtor
+  document.querySelectorAll('#parametros-checkbox-container input[type="checkbox"]').forEach(checkbox => {
+      checkbox.disabled = !isAdmin; // Apenas admin pode habilitar/desabilitar checkboxes
+  });
+
+  // Ocultar os botões de remoção dos parâmetros selecionados para técnico e produtor
+  document.querySelectorAll('.parametro-box .remove-btn').forEach(btn => {
+      btn.classList.toggle('hidden', !isAdmin);
+  });
+
+  // Elementos para enviar para o FUSION (Admin e Técnico)
+  document.querySelector('button[onclick="enviarParaFusion()"]').classList.toggle('hidden', !isAdmin && !isTecnico);
+
+  // Desabilitar edição de células na tabela para técnico e produtor
+  document.querySelectorAll('#tabela-doe td[contenteditable]').forEach(cell => {
+    if (isAdmin) {
+      cell.setAttribute('contenteditable', 'true');
+      cell.style.backgroundColor = '#fffbe6';
+      cell.style.cursor = 'text';
+    } else {
+      cell.removeAttribute('contenteditable');
+      cell.style.backgroundColor = '#f0f0f0';
+      cell.style.cursor = 'default';
+    }
+  });
+
+  // Ocultar a seção de "Selecionar parâmetros para o plano DOE" e "Parâmetros selecionados" para produtor
+  const parametrosCheckboxContainer = document.getElementById('parametros-checkbox-container');
+  const parametrosSelecionadosContainer = document.getElementById('parametros-selecionados-container');
+  const h3Parametros = document.querySelector('#config h3:first-of-type'); // O primeiro h3 na aba config
+  const h4ParametrosSelecionados = document.querySelector('#config h4'); // O h4 na aba config
+
+  if (isProdutor) {
+    parametrosCheckboxContainer.classList.add('hidden');
+    parametrosSelecionadosContainer.classList.add('hidden');
+    if (h3Parametros) h3Parametros.classList.add('hidden');
+    if (h4ParametrosSelecionados) h4ParametrosSelecionados.classList.add('hidden');
+  } else {
+    parametrosCheckboxContainer.classList.remove('hidden');
+    parametrosSelecionadosContainer.classList.remove('hidden');
+    if (h3Parametros) h3Parametros.classList.remove('hidden');
+    if (h4ParametrosSelecionados) h4ParametrosSelecionados.classList.remove('hidden');
+  }
+}
+</script>
+</body>
+</html>
